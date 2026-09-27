@@ -143,3 +143,88 @@ export function CopyButton({ text, label = "Copy" }: { text: string; label?: str
     </button>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Loading skeletons. Shown only until the first response arrives; later refreshes keep the
+// previous content on screen so nothing flickers.
+
+export function Skeleton({
+  width = "100%",
+  height = 14,
+  radius,
+}: {
+  width?: number | string;
+  height?: number | string;
+  radius?: number | string;
+}) {
+  return (
+    <span className="skeleton" style={{ width, height, borderRadius: radius }} aria-hidden="true" />
+  );
+}
+
+/** Wraps placeholder content so assistive tech announces loading once instead of reading shapes. */
+export function Loading({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="loading" aria-busy="true">
+      <span className="visually-hidden" role="status">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+export function ChartSkeleton({
+  height,
+  label = "Loading chart",
+}: {
+  height: number;
+  label?: string;
+}) {
+  return (
+    <Loading label={label}>
+      <div className="chart-skeleton" style={{ height }} aria-hidden="true">
+        <div className="chart-skeleton-axis">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} width={26} height={8} />
+          ))}
+        </div>
+        <div className="chart-skeleton-plot">
+          <span className="skeleton-sheen" />
+        </div>
+      </div>
+    </Loading>
+  );
+}
+
+export function TableSkeleton({
+  rows,
+  columns,
+  label,
+}: {
+  rows: number;
+  columns: number;
+  label: string;
+}) {
+  return (
+    <Loading label={label}>
+      <div className="table-skeleton" aria-hidden="true">
+        {Array.from({ length: rows }, (_, r) => (
+          <div
+            className="table-skeleton-row"
+            key={r}
+            style={{ gridTemplateColumns: `2fr repeat(${columns - 1}, 1fr)` }}
+          >
+            {Array.from({ length: columns }, (_, c) => (
+              <Skeleton
+                key={c}
+                width={c === 0 ? "70%" : `${45 + ((r * 7 + c * 13) % 40)}%`}
+                height={12}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </Loading>
+  );
+}

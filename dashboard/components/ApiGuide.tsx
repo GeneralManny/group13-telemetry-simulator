@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { CopyButton } from "./ui";
+import { CopyButton, Skeleton, TableSkeleton } from "./ui";
 
 interface ApiIndex {
   endpoints: Record<string, string[]>;
@@ -51,10 +51,14 @@ export function ApiGuide() {
       <div className="guide-grid">
         <section className="card">
           <h2 className="card-title">Base URL</h2>
-          <div className="copy-row">
-            <code>{base}</code>
-            <CopyButton text={base} />
-          </div>
+          {base ? (
+            <div className="copy-row">
+              <code>{base}</code>
+              <CopyButton text={base} />
+            </div>
+          ) : (
+            <Skeleton width="80%" height={30} radius={8} />
+          )}
           <h3 className="mini-title">Check status</h3>
           <Snippet code={status} />
         </section>
@@ -75,26 +79,30 @@ export function ApiGuide() {
         </section>
         <section className="card">
           <h2 className="card-title">Endpoints</h2>
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th scope="col">Endpoint</th>
-                  <th scope="col">Access</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(index?.endpoints ?? {}).flatMap(([access, list]) =>
-                  list.map((e) => (
-                    <tr key={e}>
-                      <td className="mono">{e}</td>
-                      <td>{ACCESS_LABEL[access] ?? access}</td>
-                    </tr>
-                  )),
-                )}
-              </tbody>
-            </table>
-          </div>
+          {!index ? (
+            <TableSkeleton rows={8} columns={2} label="Loading endpoints" />
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Endpoint</th>
+                    <th scope="col">Access</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(index?.endpoints ?? {}).flatMap(([access, list]) =>
+                    list.map((e) => (
+                      <tr key={e}>
+                        <td className="mono">{e}</td>
+                        <td>{ACCESS_LABEL[access] ?? access}</td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
     </div>

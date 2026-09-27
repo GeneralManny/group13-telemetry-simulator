@@ -5,7 +5,17 @@ import { ApiError, api } from "@/lib/api";
 import { HEALTH_LABEL, STATE_LABEL, ago, clock, count, healthTone, titleCase } from "@/lib/format";
 import type { Player, ScenarioCatalog, Session, Status, Timeline } from "@/lib/types";
 import { LineChart, type Series } from "./LineChart";
-import { Icon, StatusChip, usePoll, type Notify, type Tone } from "./ui";
+import {
+  ChartSkeleton,
+  Icon,
+  Loading,
+  Skeleton,
+  StatusChip,
+  TableSkeleton,
+  usePoll,
+  type Notify,
+  type Tone,
+} from "./ui";
 
 type Act = (
   label: string,
@@ -115,7 +125,9 @@ export function Overview({
               <p className="card-sub">Saved presets replay the same match every time.</p>
             </div>
           </div>
-          {!canControl ? (
+          {session === null ? (
+            <ControlsSkeleton />
+          ) : !canControl ? (
             <div className="locked-note">
               <Icon name="lock" />
               <p>Unlock with the control key to start, pause and reset matches.</p>
@@ -160,6 +172,7 @@ export function Overview({
 // ---------------------------------------------------------------------------
 
 function MatchCard({ status }: { status: Status | null }) {
+  if (!status) return <MatchCardSkeleton />;
   const m = status?.match;
   const state = status?.status ?? "idle";
   const pct = m ? Math.min(100, (m.match_clock_seconds / m.duration_seconds) * 100) : 0;
@@ -253,6 +266,66 @@ function MatchCard({ status }: { status: Status | null }) {
         </p>
       )}
     </section>
+  );
+}
+
+function MatchCardSkeleton() {
+  return (
+    <section className="card match-card" aria-labelledby="match-title">
+      <div className="card-head">
+        <div>
+          <h2 id="match-title" className="card-title">
+            Current match
+          </h2>
+          <Skeleton width={140} height={12} />
+        </div>
+        <Skeleton width={96} height={30} radius={999} />
+      </div>
+      <Loading label="Loading match">
+        <div className="scoreboard" aria-hidden="true">
+          <Skeleton width={110} height={18} />
+          <Skeleton width={120} height={52} radius={10} />
+          <span className="team team-right">
+            <Skeleton width={110} height={18} />
+          </span>
+        </div>
+        <div className="skeleton-row" aria-hidden="true">
+          <Skeleton width={90} height={12} />
+          <Skeleton width={90} height={12} />
+        </div>
+        <Skeleton height={8} radius={999} />
+        <div className="meta-grid" aria-hidden="true">
+          <Skeleton width="50%" height={30} />
+          <Skeleton width="50%" height={30} />
+          <span className="meta-wide">
+            <Skeleton width="70%" height={30} />
+          </span>
+        </div>
+      </Loading>
+    </section>
+  );
+}
+
+function ControlsSkeleton() {
+  return (
+    <Loading label="Loading controls">
+      <div className="skeleton-row" aria-hidden="true" style={{ justifyContent: "flex-start" }}>
+        {[64, 74, 56, 66, 60].map((w, i) => (
+          <Skeleton key={i} width={w} height={38} radius={8} />
+        ))}
+      </div>
+      <div className="skeleton-stack" aria-hidden="true">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div className="skeleton-row" key={i}>
+            <div className="skeleton-stack" style={{ flex: 1, gap: 6 }}>
+              <Skeleton width="40%" height={14} />
+              <Skeleton width="75%" height={11} />
+            </div>
+            <Skeleton width={62} height={34} radius={8} />
+          </div>
+        ))}
+      </div>
+    </Loading>
   );
 }
 
@@ -478,6 +551,22 @@ function Controls({
 // ---------------------------------------------------------------------------
 
 function StatRow({ status }: { status: Status | null }) {
+  if (!status) {
+    const labels = ["Events generated", "Deliveries", "Failed", "Pending", "Retries", "Webhooks"];
+    return (
+      <Loading label="Loading delivery counters">
+        <div className="stat-row" aria-hidden="true">
+          {labels.map((label) => (
+            <div className="stat" key={label}>
+              <span className="stat-label">{label}</span>
+              <Skeleton width="45%" height={28} />
+              <Skeleton width="65%" height={10} />
+            </div>
+          ))}
+        </div>
+      </Loading>
+    );
+  }
   const s = status;
   const health = s?.webhook_status ?? "unknown";
   const dests = s?.webhook_target.destinations ?? 0;
@@ -588,6 +677,8 @@ function OddsCard({ timeline, xMax }: { timeline: Timeline | null; xMax: number 
           </table>
           {odds.length === 0 && <p className="empty">No odds yet.</p>}
         </div>
+      ) : timeline === null ? (
+        <ChartSkeleton height={400} label="Loading odds" />
       ) : (
         <LineChart
           series={series}
@@ -619,7 +710,9 @@ function PlayerCard({
   xMax: number;
 }) {
   const p = timeline?.player;
-  const samples = p && p.player_id === playerId ? p.samples : [];
+  // Also true right after switching player, until that player's data arrives.
+  const loading = !p || p.player_id !== playerId;
+  const samples = p && !loading ? p.samples : [];
   const baseline = p?.baseline ?? players.find((x) => x.player_id === playerId)?.baseline;
   const color = TEAM_COLOR[p?.team_id ?? "team_blue"];
   const band = (key: keyof NonNullable<typeof baseline>) =>
@@ -643,16 +736,20 @@ function PlayerCard({
           </h2>
           <p className="card-sub">Every action, against the player&apos;s baseline range</p>
         </div>
-        <label className="inline-select">
-          <span className="visually-hidden">Player</span>
-          <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
-            {players.map((pl) => (
-              <option key={pl.player_id} value={pl.player_id}>
-                {pl.display_name} ({pl.player_id})
-              </option>
-            ))}
-          </select>
-        </label>
+        {players.length === 0 ? (
+          <Skeleton width={190} height={38} radius={8} />
+        ) : (
+          <label className="inline-select">
+            <span className="visually-hidden">Player</span>
+            <select value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
+              {players.map((pl) => (
+                <option key={pl.player_id} value={pl.player_id}>
+                  {pl.display_name} ({pl.player_id})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       <ul className="legend" aria-label="Legend">
         <li>
@@ -664,44 +761,55 @@ function PlayerCard({
           Baseline range (mean ± 2.5 sd)
         </li>
       </ul>
-      <div className="multiples">
-        <div>
-          <h3 className="mini-title">Reaction time (ms)</h3>
-          <LineChart
-            series={metric("reaction_time_ms", "Reaction time")}
-            xMax={xMax}
-            height={130}
-            ariaLabel="Reaction time"
-            yFormat={(v) => `${Math.round(v)}`}
-            band={band("reaction_time_ms")}
-            emptyText="No actions yet"
-          />
+      {loading ? (
+        <div className="multiples">
+          {["Reaction time (ms)", "Accuracy (%)", "Headshot rate (%)"].map((title) => (
+            <div key={title}>
+              <h3 className="mini-title">{title}</h3>
+              <ChartSkeleton height={130} label={`Loading ${title.toLowerCase()}`} />
+            </div>
+          ))}
         </div>
-        <div>
-          <h3 className="mini-title">Accuracy (%)</h3>
-          <LineChart
-            series={metric("accuracy_pct", "Accuracy")}
-            xMax={xMax}
-            height={130}
-            ariaLabel="Accuracy"
-            yFormat={(v) => `${Math.round(v)}`}
-            band={band("accuracy_pct")}
-            emptyText="No actions yet"
-          />
+      ) : (
+        <div className="multiples">
+          <div>
+            <h3 className="mini-title">Reaction time (ms)</h3>
+            <LineChart
+              series={metric("reaction_time_ms", "Reaction time")}
+              xMax={xMax}
+              height={130}
+              ariaLabel="Reaction time"
+              yFormat={(v) => `${Math.round(v)}`}
+              band={band("reaction_time_ms")}
+              emptyText="No actions yet"
+            />
+          </div>
+          <div>
+            <h3 className="mini-title">Accuracy (%)</h3>
+            <LineChart
+              series={metric("accuracy_pct", "Accuracy")}
+              xMax={xMax}
+              height={130}
+              ariaLabel="Accuracy"
+              yFormat={(v) => `${Math.round(v)}`}
+              band={band("accuracy_pct")}
+              emptyText="No actions yet"
+            />
+          </div>
+          <div>
+            <h3 className="mini-title">Headshot rate (%)</h3>
+            <LineChart
+              series={metric("headshot_pct", "Headshot rate")}
+              xMax={xMax}
+              height={130}
+              ariaLabel="Headshot rate"
+              yFormat={(v) => `${Math.round(v)}`}
+              band={band("headshot_pct")}
+              emptyText="No actions yet"
+            />
+          </div>
         </div>
-        <div>
-          <h3 className="mini-title">Headshot rate (%)</h3>
-          <LineChart
-            series={metric("headshot_pct", "Headshot rate")}
-            xMax={xMax}
-            height={130}
-            ariaLabel="Headshot rate"
-            yFormat={(v) => `${Math.round(v)}`}
-            band={band("headshot_pct")}
-            emptyText="No actions yet"
-          />
-        </div>
-      </div>
+      )}
     </section>
   );
 }
@@ -742,64 +850,70 @@ function PlayersTable({ timeline }: { timeline: Timeline | null }) {
           </p>
         </div>
       </div>
-      <div className="table-wrap">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Player</th>
-              <th scope="col" className="num">
-                Reaction ms
-              </th>
-              <th scope="col" className="num">
-                Accuracy %
-              </th>
-              <th scope="col" className="num">
-                Headshot %
-              </th>
-              <th scope="col" className="num">
-                APM
-              </th>
-              <th scope="col" className="num">
-                K / D / A
-              </th>
-              <th scope="col">Against baseline</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(({ s, m, worst }) => (
-              <tr key={s.player_id}>
-                <th scope="row">
-                  <span
-                    className="team-dot"
-                    style={{ background: TEAM_COLOR[s.team_id] }}
-                    aria-hidden="true"
-                  />
-                  {s.display_name} <span className="muted mono">{s.player_id}</span>
-                  <span className="visually-hidden">, {TEAM_NAME[s.team_id]}</span>
+      {!timeline ? (
+        <TableSkeleton rows={10} columns={7} label="Loading players" />
+      ) : (
+        <div className="table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Player</th>
+                <th scope="col" className="num">
+                  Reaction ms
                 </th>
-                <td className="num">{m ? m.reaction_time_ms : "-"}</td>
-                <td className="num">{m ? m.accuracy_pct : "-"}</td>
-                <td className="num">{m ? m.headshot_pct : "-"}</td>
-                <td className="num">{m ? m.actions_per_minute : "-"}</td>
-                <td className="num">{m ? `${m.kills} / ${m.deaths} / ${m.assists}` : "-"}</td>
-                <td>
-                  {!worst ? (
-                    <span className="muted">No snapshot yet</span>
-                  ) : Math.abs(worst.z) <= 2.5 ? (
-                    <StatusChip tone="good">Within range</StatusChip>
-                  ) : (
-                    <StatusChip tone="warning">
-                      {Math.abs(worst.z).toFixed(1)} sd {worst.z > 0 ? "above" : "below"} on{" "}
-                      {worst.label}
-                    </StatusChip>
-                  )}
-                </td>
+                <th scope="col" className="num">
+                  Accuracy %
+                </th>
+                <th scope="col" className="num">
+                  Headshot %
+                </th>
+                <th scope="col" className="num">
+                  APM
+                </th>
+                <th scope="col" className="num">
+                  K / D / A
+                </th>
+                <th scope="col">Against baseline</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {rows.length === 0 && <p className="empty">Player snapshots appear when a match starts.</p>}
-      </div>
+            </thead>
+            <tbody>
+              {rows.map(({ s, m, worst }) => (
+                <tr key={s.player_id}>
+                  <th scope="row">
+                    <span
+                      className="team-dot"
+                      style={{ background: TEAM_COLOR[s.team_id] }}
+                      aria-hidden="true"
+                    />
+                    {s.display_name} <span className="muted mono">{s.player_id}</span>
+                    <span className="visually-hidden">, {TEAM_NAME[s.team_id]}</span>
+                  </th>
+                  <td className="num">{m ? m.reaction_time_ms : "-"}</td>
+                  <td className="num">{m ? m.accuracy_pct : "-"}</td>
+                  <td className="num">{m ? m.headshot_pct : "-"}</td>
+                  <td className="num">{m ? m.actions_per_minute : "-"}</td>
+                  <td className="num">{m ? `${m.kills} / ${m.deaths} / ${m.assists}` : "-"}</td>
+                  <td>
+                    {!worst ? (
+                      <span className="muted">No snapshot yet</span>
+                    ) : Math.abs(worst.z) <= 2.5 ? (
+                      <StatusChip tone="good">Within range</StatusChip>
+                    ) : (
+                      <StatusChip tone="warning">
+                        {Math.abs(worst.z).toFixed(1)} sd {worst.z > 0 ? "above" : "below"} on{" "}
+                        {worst.label}
+                      </StatusChip>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {rows.length === 0 && (
+            <p className="empty">Player snapshots appear when a match starts.</p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

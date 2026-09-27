@@ -1378,3 +1378,113 @@ input[type="checkbox"] {
     flex-wrap: wrap;
   }
 }
+
+/* ------------------------------------------------------------------------------------------
+   Loading skeletons
+   ------------------------------------------------------------------------------------------ */
+.skeleton {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  max-width: 100%;
+  vertical-align: middle;
+  background: var(--surface-3);
+  border-radius: 6px;
+}
+.skeleton::after,
+.skeleton-sheen {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--surface) 55%, transparent),
+    transparent
+  );
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .skeleton-sheen {
+    animation: none;
+    display: none;
+  }
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-skeleton {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 8px;
+}
+.chart-skeleton-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 0 18px;
+}
+.chart-skeleton-plot {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  border-bottom: 1px solid var(--axis);
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(25% - 1px),
+    var(--gridline) calc(25% - 1px),
+    var(--gridline) 25%
+  );
+  margin-bottom: 18px;
+}
+
+.table-skeleton {
+  display: flex;
+  flex-direction: column;
+}
+.table-skeleton-row {
+  display: grid;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--critical) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--critical) 35%, transparent);
+  font-size: 14px;
+}
+.offline-banner .icon {
+  color: var(--critical);
+}

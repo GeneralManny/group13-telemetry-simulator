@@ -7,7 +7,7 @@ import { ApiGuide } from "./ApiGuide";
 import { KeyDialog } from "./KeyDialog";
 import { LiveEvents } from "./LiveEvents";
 import { Overview } from "./Overview";
-import { Icon, ToastRegion, usePoll, useToasts } from "./ui";
+import { Icon, Skeleton, ToastRegion, usePoll, useToasts } from "./ui";
 import { Webhooks } from "./Webhooks";
 
 const TABS = [
@@ -164,7 +164,9 @@ export function Console() {
           >
             <Icon name={dark ? "sun" : "moon"} />
           </button>
-          {session?.open ? (
+          {session === null && reachable !== false ? (
+            <Skeleton width={96} height={38} radius={8} />
+          ) : session?.open ? (
             <span
               className="pill"
               data-tone="warning"
@@ -198,6 +200,15 @@ export function Console() {
       </header>
 
       <main id="main" className="page">
+        {reachable === false && (
+          <div className="offline-banner" role="alert">
+            <Icon name="critical" />
+            <span>
+              The simulator is not answering. Retrying every few seconds; the page updates as soon
+              as it is back.
+            </span>
+          </div>
+        )}
         {tab === "overview" && (
           <Overview
             status={status}

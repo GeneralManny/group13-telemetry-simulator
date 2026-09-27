@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { ApiError, api } from "@/lib/api";
 import { HEALTH_LABEL, ago, count, healthTone, randomToken, titleCase } from "@/lib/format";
 import type { Destination, SendResult, Session } from "@/lib/types";
-import { CopyButton, Icon, StatusChip, usePoll, type Notify } from "./ui";
+import { CopyButton, Icon, Loading, Skeleton, StatusChip, usePoll, type Notify } from "./ui";
 
 interface Props {
   session: Session | null;
@@ -46,7 +46,9 @@ export function Webhooks({ session, accessKey, eventTypes, notify, onUnlock }: P
         </p>
       </div>
 
-      {!allowed ? (
+      {session === null ? (
+        <WebhooksSkeleton />
+      ) : !allowed ? (
         <section className="card locked-card">
           <Icon name="lock" size={20} />
           <h2 className="card-title">Unlock to manage webhooks</h2>
@@ -83,6 +85,7 @@ export function Webhooks({ session, accessKey, eventTypes, notify, onUnlock }: P
                 {loadError}
               </p>
             )}
+            {!data && !loadError && <DestinationSkeleton />}
             <ul className="destination-list">
               {(data?.destinations ?? []).map((d) => (
                 <DestinationRow
@@ -103,6 +106,56 @@ export function Webhooks({ session, accessKey, eventTypes, notify, onUnlock }: P
           <SetupSteps />
         </div>
       )}
+    </div>
+  );
+}
+
+function DestinationSkeleton() {
+  return (
+    <Loading label="Loading destinations">
+      <div className="destination-list" aria-hidden="true">
+        {[0, 1].map((i) => (
+          <div className="destination" key={i}>
+            <div className="skeleton-stack">
+              <Skeleton width="55%" height={16} />
+              <Skeleton width="80%" height={11} />
+              <Skeleton width="40%" height={11} />
+            </div>
+            <div className="skeleton-stack">
+              <Skeleton width={90} height={22} radius={999} />
+              <Skeleton width="70%" height={11} />
+            </div>
+            <div className="skeleton-row">
+              <Skeleton width={54} height={30} radius={8} />
+              <Skeleton width={60} height={30} radius={8} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Loading>
+  );
+}
+
+function WebhooksSkeleton() {
+  return (
+    <div className="webhooks-grid">
+      <section className="card">
+        <Loading label="Loading">
+          <Skeleton width="45%" height={18} />
+          {[0, 1, 2].map((i) => (
+            <div className="skeleton-stack" key={i} style={{ gap: 6 }}>
+              <Skeleton width={110} height={11} />
+              <Skeleton height={38} radius={8} />
+            </div>
+          ))}
+          <Skeleton height={64} radius={8} />
+        </Loading>
+      </section>
+      <section className="card">
+        <Skeleton width="35%" height={18} />
+        <div style={{ height: 16 }} />
+        <DestinationSkeleton />
+      </section>
     </div>
   );
 }

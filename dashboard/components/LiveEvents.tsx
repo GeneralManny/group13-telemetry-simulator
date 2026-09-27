@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { clock, titleCase } from "@/lib/format";
 import type { EmittedEvent, Player } from "@/lib/types";
-import { CopyButton } from "./ui";
+import { CopyButton, TableSkeleton } from "./ui";
 
 const MAX_ROWS = 400;
 
@@ -52,6 +52,7 @@ export function LiveEvents({
   const [type, setType] = useState("");
   const [player, setPlayer] = useState("");
   const [selected, setSelected] = useState<EmittedEvent | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
 
@@ -60,7 +61,8 @@ export function LiveEvents({
     let cancelled = false;
     api<{ events: EmittedEvent[] }>("/api/v1/events/recent?limit=150")
       .then((r) => !cancelled && setEvents(r.events))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => !cancelled && setLoaded(true));
 
     const source = new EventSource("/api/v1/events/stream");
     source.onopen = () => setConnected(true);
@@ -180,8 +182,12 @@ export function LiveEvents({
                 })}
               </tbody>
             </table>
-            {visible.length === 0 && (
-              <p className="empty">Waiting for events. Start a match on the Overview tab.</p>
+            {!loaded ? (
+              <TableSkeleton rows={10} columns={5} label="Loading events" />
+            ) : (
+              visible.length === 0 && (
+                <p className="empty">Waiting for events. Start a match on the Overview tab.</p>
+              )
             )}
           </div>
         </section>
