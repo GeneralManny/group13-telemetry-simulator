@@ -853,66 +853,69 @@ function PlayersTable({ timeline }: { timeline: Timeline | null }) {
       {!timeline ? (
         <TableSkeleton rows={10} columns={7} label="Loading players" />
       ) : (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th scope="col">Player</th>
-                <th scope="col" className="num">
-                  Reaction ms
-                </th>
-                <th scope="col" className="num">
-                  Accuracy %
-                </th>
-                <th scope="col" className="num">
-                  Headshot %
-                </th>
-                <th scope="col" className="num">
-                  APM
-                </th>
-                <th scope="col" className="num">
-                  K / D / A
-                </th>
-                <th scope="col">Against baseline</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ s, m, worst }) => (
-                <tr key={s.player_id}>
-                  <th scope="row">
-                    <span
-                      className="team-dot"
-                      style={{ background: TEAM_COLOR[s.team_id] }}
-                      aria-hidden="true"
-                    />
-                    {s.display_name} <span className="muted mono">{s.player_id}</span>
-                    <span className="visually-hidden">, {TEAM_NAME[s.team_id]}</span>
+        <>
+          <p className="swipe-hint">Swipe the table sideways to see every column.</p>
+          <div className="table-wrap">
+            <table className="data-table sticky-first">
+              <thead>
+                <tr>
+                  <th scope="col">Player</th>
+                  <th scope="col" className="num">
+                    Reaction ms
                   </th>
-                  <td className="num">{m ? m.reaction_time_ms : "-"}</td>
-                  <td className="num">{m ? m.accuracy_pct : "-"}</td>
-                  <td className="num">{m ? m.headshot_pct : "-"}</td>
-                  <td className="num">{m ? m.actions_per_minute : "-"}</td>
-                  <td className="num">{m ? `${m.kills} / ${m.deaths} / ${m.assists}` : "-"}</td>
-                  <td>
-                    {!worst ? (
-                      <span className="muted">No snapshot yet</span>
-                    ) : Math.abs(worst.z) <= 2.5 ? (
-                      <StatusChip tone="good">Within range</StatusChip>
-                    ) : (
-                      <StatusChip tone="warning">
-                        {Math.abs(worst.z).toFixed(1)} sd {worst.z > 0 ? "above" : "below"} on{" "}
-                        {worst.label}
-                      </StatusChip>
-                    )}
-                  </td>
+                  <th scope="col" className="num">
+                    Accuracy %
+                  </th>
+                  <th scope="col" className="num">
+                    Headshot %
+                  </th>
+                  <th scope="col" className="num">
+                    APM
+                  </th>
+                  <th scope="col" className="num">
+                    K / D / A
+                  </th>
+                  <th scope="col">Against baseline</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {rows.length === 0 && (
-            <p className="empty">Player snapshots appear when a match starts.</p>
-          )}
-        </div>
+              </thead>
+              <tbody>
+                {rows.map(({ s, m, worst }) => (
+                  <tr key={s.player_id}>
+                    <th scope="row">
+                      <span
+                        className="team-dot"
+                        style={{ background: TEAM_COLOR[s.team_id] }}
+                        aria-hidden="true"
+                      />
+                      {s.display_name} <span className="muted mono">{s.player_id}</span>
+                      <span className="visually-hidden">, {TEAM_NAME[s.team_id]}</span>
+                    </th>
+                    <td className="num">{m ? m.reaction_time_ms : "-"}</td>
+                    <td className="num">{m ? m.accuracy_pct : "-"}</td>
+                    <td className="num">{m ? m.headshot_pct : "-"}</td>
+                    <td className="num">{m ? m.actions_per_minute : "-"}</td>
+                    <td className="num">{m ? `${m.kills} / ${m.deaths} / ${m.assists}` : "-"}</td>
+                    <td>
+                      {!worst ? (
+                        <span className="muted">No snapshot yet</span>
+                      ) : Math.abs(worst.z) <= 2.5 ? (
+                        <StatusChip tone="good">Within range</StatusChip>
+                      ) : (
+                        <StatusChip tone="warning">
+                          {Math.abs(worst.z).toFixed(1)} sd {worst.z > 0 ? "above" : "below"} on{" "}
+                          {worst.label}
+                        </StatusChip>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {rows.length === 0 && (
+              <p className="empty">Player snapshots appear when a match starts.</p>
+            )}
+          </div>
+        </>
       )}
     </section>
   );

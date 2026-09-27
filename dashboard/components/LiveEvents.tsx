@@ -54,6 +54,17 @@ export function LiveEvents({
   const [selected, setSelected] = useState<EmittedEvent | null>(null);
   const [loaded, setLoaded] = useState(false);
   const pausedRef = useRef(paused);
+  const jsonRef = useRef<HTMLElement>(null);
+  const feedRef = useRef<HTMLElement>(null);
+  // On stacked (narrow) layouts the payload sits below the list, so bring it into view.
+  const select = (e: EmittedEvent) => {
+    setSelected(e);
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      requestAnimationFrame(() =>
+        jsonRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
+    }
+  };
   pausedRef.current = paused;
 
   useEffect(() => {
@@ -136,7 +147,7 @@ export function LiveEvents({
       </div>
 
       <div className="events-grid">
-        <section className="card feed-card" aria-label="Event feed">
+        <section className="card feed-card" aria-label="Event feed" ref={feedRef}>
           <div className="table-wrap table-scroll tall">
             <table className="data-table feed-table">
               <thead>
@@ -159,15 +170,17 @@ export function LiveEvents({
                       key={`${String(p.event_id)}-${i}`}
                       className={isSel ? "selected" : undefined}
                       tabIndex={0}
-                      onClick={() => setSelected(e)}
+                      onClick={() => select(e)}
                       onKeyDown={(k) =>
-                        (k.key === "Enter" || k.key === " ") && (k.preventDefault(), setSelected(e))
+                        (k.key === "Enter" || k.key === " ") && (k.preventDefault(), select(e))
                       }
                       aria-selected={isSel}
                     >
-                      <td className="num">{String(p.sequence_number ?? "-")}</td>
-                      <td className="tabular">{clock(p.metadata?.match_clock_seconds)}</td>
-                      <td>
+                      <td className="num feed-seq">{String(p.sequence_number ?? "-")}</td>
+                      <td className="tabular feed-clock">
+                        {clock(p.metadata?.match_clock_seconds)}
+                      </td>
+                      <td className="feed-type">
                         <span className="type-tag" data-type={String(p.event_type)}>
                           {titleCase(String(p.event_type ?? "unknown"))}
                         </span>
@@ -175,8 +188,8 @@ export function LiveEvents({
                           <span className="tag tag-fault">Fault: {titleCase(e.fault)}</span>
                         )}
                       </td>
-                      <td className="mono">{String(p.player_id ?? "")}</td>
-                      <td>{summary(p)}</td>
+                      <td className="mono feed-player">{String(p.player_id ?? "")}</td>
+                      <td className="feed-detail">{summary(p)}</td>
                     </tr>
                   );
                 })}
@@ -191,12 +204,25 @@ export function LiveEvents({
             )}
           </div>
         </section>
-        <aside className="card json-card" aria-labelledby="json-title">
+        <aside className="card json-card" aria-labelledby="json-title" ref={jsonRef}>
           <div className="card-head">
             <h2 id="json-title" className="card-title">
               Event payload
             </h2>
-            {selected && <CopyButton text={json} />}
+            <div className="card-actions">
+              {selected && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-small narrow-only"
+                  onClick={() =>
+                    feedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                >
+                  Back to list
+                </button>
+              )}
+              {selected && <CopyButton text={json} />}
+            </div>
           </div>
           <pre className="json-view">
             {selected ? json : "Select an event to see the exact JSON your webhook receives."}

@@ -43,8 +43,8 @@ function yTicks(min: number, max: number, target = 4): number[] {
   return out;
 }
 
-function xTicks(xMax: number): number[] {
-  const step = [15, 30, 60, 120, 300, 600, 900, 1800].find((s) => xMax / s <= 6) ?? 3600;
+function xTicks(xMax: number, maxTicks: number): number[] {
+  const step = [15, 30, 60, 120, 300, 600, 900, 1800].find((s) => xMax / s <= maxTicks) ?? 3600;
   const out: number[] = [];
   for (let v = 0; v <= xMax + 1e-9; v += step) out.push(v);
   return out;
@@ -65,7 +65,7 @@ function nearestIndex(points: [number, number][], x: number): number {
 export function LineChart({
   series,
   xMax,
-  height,
+  height: baseHeight,
   ariaLabel,
   yFormat = (v) => String(v),
   band,
@@ -75,6 +75,8 @@ export function LineChart({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(600);
   const [hoverX, setHoverX] = useState<number | null>(null);
+  // Tall charts shrink on narrow screens so a phone shows the chart and its context together.
+  const height = Math.min(baseHeight, Math.max(120, Math.round(width * 0.8)));
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -200,7 +202,7 @@ export function LineChart({
           y2={M.top + geo.plotH}
           className="chart-axis"
         />
-        {xTicks(xMax).map((t) => (
+        {xTicks(xMax, width < 420 ? 4 : 6).map((t) => (
           <text
             key={`x${t}`}
             x={geo.x(t)}
@@ -287,6 +289,7 @@ export function LineChart({
           tabIndex={hasData ? 0 : -1}
           aria-label={`${ariaLabel}. Use the arrow keys to read values.`}
           onPointerMove={onMove}
+          onPointerDown={onMove}
           onPointerLeave={() => setHoverX(null)}
           onFocus={() => primary?.points.length && setHoverX(primary.points.at(-1)![0])}
           onBlur={() => setHoverX(null)}

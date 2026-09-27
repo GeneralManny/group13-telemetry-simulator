@@ -1231,6 +1231,9 @@ input[type="checkbox"] {
 .code-block pre {
   margin: 0;
   flex: 1;
+  /* Without this a long line widens the whole page instead of scrolling inside the block. */
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   font-family: var(--mono);
   font-size: 12.5px;
@@ -1487,4 +1490,304 @@ input[type="checkbox"] {
 }
 .offline-banner .icon {
   color: var(--critical);
+}
+
+/* ------------------------------------------------------------------------------------------
+   Touch and phones
+   ------------------------------------------------------------------------------------------ */
+.card-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.narrow-only,
+.swipe-hint {
+  display: none;
+}
+.chart-hit {
+  /* Vertical swipes scroll the page; taps and horizontal drags read values. */
+  touch-action: pan-y;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+button,
+summary,
+.tab,
+.feed-table tbody tr {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Finger-sized targets wherever the main pointer is a touch screen. */
+@media (pointer: coarse) {
+  .btn {
+    min-height: 44px;
+  }
+  .btn-small {
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    /* 16px stops iOS and iPadOS Safari zooming the page when a field is focused. */
+    font-size: 16px;
+  }
+  .tab {
+    min-height: 44px;
+  }
+  .check {
+    min-height: 36px;
+  }
+  .custom-run summary {
+    padding: 12px 0;
+  }
+}
+
+@media (max-width: 1100px) {
+  .narrow-only {
+    display: inline-flex;
+  }
+  .json-view {
+    max-height: 70vh;
+  }
+}
+
+@media (max-width: 720px) {
+  /* 16px stops iOS Safari zooming the page when a field is focused. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .tab {
+    padding: 8px 4px;
+    font-size: 14px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.2;
+  }
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+  .stack-lg {
+    gap: 16px;
+  }
+  .section-intro h1 {
+    font-size: 20px;
+  }
+  .section-intro p {
+    font-size: 14px;
+  }
+
+  .lifecycle .btn {
+    flex: 1 1 calc(33.333% - 8px);
+  }
+  .preset-list li {
+    padding: 10px;
+  }
+
+  .data-table {
+    font-size: 13px;
+  }
+  .data-table th,
+  .data-table td {
+    padding: 8px;
+  }
+
+  /* Players table scrolls sideways; the player name stays pinned. */
+  .sticky-first tbody th,
+  .sticky-first thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--border);
+  }
+
+  /* Event feed rows become compact cards. */
+  .feed-card {
+    padding: 4px 10px;
+  }
+  .feed-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .feed-table tbody tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "type player clock"
+      "detail detail detail";
+    gap: 4px 10px;
+    align-items: center;
+    padding: 10px 2px;
+    border-bottom: 1px solid var(--border);
+  }
+  .feed-table tbody td {
+    padding: 0;
+    border: 0;
+    white-space: normal;
+    min-width: 0;
+  }
+  .feed-table td:last-child {
+    min-width: 0;
+  }
+  .feed-type {
+    grid-area: type;
+  }
+  .feed-player {
+    grid-area: player;
+    color: var(--muted);
+  }
+  .feed-clock {
+    grid-area: clock;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .feed-detail {
+    grid-area: detail;
+    color: var(--ink-2);
+  }
+  .feed-seq {
+    display: none;
+  }
+  .table-scroll.tall {
+    max-height: 62vh;
+    min-height: 280px;
+  }
+  .toolbar .inline-select {
+    flex: 1 1 140px;
+  }
+  .toolbar .inline-select select {
+    flex: 1;
+  }
+
+  .code-block {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .code-block .btn {
+    align-self: flex-end;
+  }
+  .copy-row code {
+    flex: 1 1 100%;
+  }
+
+  .token-reveal code {
+    font-size: 12px;
+  }
+
+  .toast-region {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    max-width: none;
+  }
+
+  .footer {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .brand-text strong {
+    font-size: 14px;
+  }
+  .score {
+    font-size: 38px;
+    gap: 8px;
+  }
+  .scoreboard {
+    gap: 8px;
+  }
+  .team {
+    font-size: 13px;
+    gap: 6px;
+  }
+  .stat {
+    padding: 12px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+  .meta-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .swipe-hint {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin: -6px 0 8px;
+  }
+
+  /* Event filters: two selects side by side, then the actions and live state in one row. */
+  .toolbar {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .toolbar .inline-select {
+    grid-column: span 3;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+  .toolbar .btn {
+    grid-column: span 2;
+  }
+  .toolbar .pill {
+    grid-column: span 2;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  /* Endpoints: each path over its access level instead of two cramped columns. */
+  .endpoint-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .endpoint-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .endpoint-table tbody td {
+    border: 0;
+    padding: 0 4px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .endpoint-access {
+    font-size: 12px;
+    color: var(--muted);
+  }
 }

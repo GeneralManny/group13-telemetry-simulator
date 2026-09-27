@@ -83,7 +83,7 @@ export function ApiGuide() {
             <TableSkeleton rows={8} columns={2} label="Loading endpoints" />
           ) : (
             <div className="table-wrap">
-              <table className="data-table">
+              <table className="data-table endpoint-table">
                 <thead>
                   <tr>
                     <th scope="col">Endpoint</th>
@@ -94,8 +94,8 @@ export function ApiGuide() {
                   {Object.entries(index?.endpoints ?? {}).flatMap(([access, list]) =>
                     list.map((e) => (
                       <tr key={e}>
-                        <td className="mono">{e}</td>
-                        <td>{ACCESS_LABEL[access] ?? access}</td>
+                        <td className="mono endpoint-path">{e}</td>
+                        <td className="endpoint-access">{ACCESS_LABEL[access] ?? access}</td>
                       </tr>
                     )),
                   )}
