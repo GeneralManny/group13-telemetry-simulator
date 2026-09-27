@@ -1,0 +1,43 @@
+{
+  "name": "group13-telemetry-simulator",
+  "version": "1.0.0",
+  "description": "Group 13 live esports telemetry and betting-odds simulator for the anti-cheat and match integrity monitor",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts | pino-pretty",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "samples": "tsx scripts/generate-samples.ts",
+    "schema": "tsx scripts/export-schema.ts",
+    "mock-webhook": "tsx scripts/mock-webhook.ts",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "fastify": "^5.12.5",
+    "pino": "^10.3.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.3",
+    "eslint": "^10.11.0",
+    "pino-pretty": "^13.1.3",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.2"
+  }
+}

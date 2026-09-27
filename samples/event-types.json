@@ -1,0 +1,542 @@
+{
+  "match_started": {
+    "event_id": "evt_20260927_052158_efbe_000001",
+    "event_type": "match_started",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": null,
+    "player_id": null,
+    "team_id": null,
+    "sequence_number": 1,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {},
+    "odds": {},
+    "data": {
+      "teams": [
+        {
+          "team_id": "team_blue",
+          "name": "Team Blue",
+          "players": [
+            {
+              "player_id": "player_06",
+              "display_name": "Blue Six",
+              "role": "entry"
+            },
+            {
+              "player_id": "player_07",
+              "display_name": "Blue Seven",
+              "role": "attacker"
+            },
+            {
+              "player_id": "player_08",
+              "display_name": "Blue Eight",
+              "role": "support"
+            },
+            {
+              "player_id": "player_09",
+              "display_name": "Blue Nine",
+              "role": "sniper"
+            },
+            {
+              "player_id": "player_10",
+              "display_name": "Blue Ten",
+              "role": "anchor"
+            }
+          ]
+        },
+        {
+          "team_id": "team_red",
+          "name": "Team Red",
+          "players": [
+            {
+              "player_id": "player_01",
+              "display_name": "Red One",
+              "role": "entry"
+            },
+            {
+              "player_id": "player_02",
+              "display_name": "Red Two",
+              "role": "attacker"
+            },
+            {
+              "player_id": "player_03",
+              "display_name": "Red Three",
+              "role": "support"
+            },
+            {
+              "player_id": "player_04",
+              "display_name": "Red Four",
+              "role": "sniper"
+            },
+            {
+              "player_id": "player_05",
+              "display_name": "Red Five",
+              "role": "anchor"
+            }
+          ]
+        }
+      ],
+      "map": "arena_alpha",
+      "scheduled_duration_seconds": 120,
+      "total_rounds": 5,
+      "round_duration_seconds": 24,
+      "started_at": "2026-09-27T05:21:58.465Z"
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 0
+    }
+  },
+  "odds_update": {
+    "event_id": "evt_20260927_052158_efbe_000002",
+    "event_type": "odds_update",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": "round_01",
+    "player_id": null,
+    "team_id": null,
+    "sequence_number": 2,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {},
+    "odds": {
+      "provider": "simulator",
+      "market": "match_winner",
+      "team_blue": 1.83,
+      "team_red": 1.98,
+      "previous_team_blue": 1.83,
+      "previous_team_red": 1.98,
+      "movement_pct": 0,
+      "market_timestamp": "2026-09-27T05:21:58.466Z"
+    },
+    "data": {
+      "reason": "match_start",
+      "score": {
+        "team_blue": 0,
+        "team_red": 0
+      }
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 0.5
+    }
+  },
+  "round_started": {
+    "event_id": "evt_20260927_052158_efbe_000003",
+    "event_type": "round_started",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": "round_01",
+    "player_id": null,
+    "team_id": null,
+    "sequence_number": 3,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {},
+    "odds": {},
+    "data": {
+      "round_number": 1,
+      "score": {
+        "team_blue": 0,
+        "team_red": 0
+      },
+      "active_players": [
+        "player_01",
+        "player_02",
+        "player_03",
+        "player_04",
+        "player_05",
+        "player_06",
+        "player_07",
+        "player_08",
+        "player_09",
+        "player_10"
+      ]
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 1
+    }
+  },
+  "combat_event": {
+    "event_id": "evt_20260927_052158_efbe_000004",
+    "event_type": "combat_event",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": "round_01",
+    "player_id": "player_05",
+    "team_id": "team_red",
+    "sequence_number": 4,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {
+      "damage": 41,
+      "reaction_time_ms": 251
+    },
+    "odds": {},
+    "data": {
+      "result": "damage",
+      "target_player_id": "player_09",
+      "target_team_id": "team_blue",
+      "weapon": "ability_blast",
+      "headshot": false,
+      "assist_player_id": null
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 1.5
+    }
+  },
+  "player_action": {
+    "event_id": "evt_20260927_052158_efbe_000005",
+    "event_type": "player_action",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": "round_01",
+    "player_id": "player_09",
+    "team_id": "team_blue",
+    "sequence_number": 5,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {
+      "reaction_time_ms": 211,
+      "accuracy_pct": 55.6,
+      "headshot_pct": 29.9,
+      "actions_per_minute": 119
+    },
+    "odds": {},
+    "data": {
+      "action_type": "peek",
+      "position": {
+        "x": 91,
+        "y": 84.4
+      }
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 2
+    }
+  },
+  "player_snapshot": {
+    "event_id": "evt_20260927_052158_efbe_000020",
+    "event_type": "player_snapshot",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": "round_01",
+    "player_id": "player_01",
+    "team_id": "team_red",
+    "sequence_number": 20,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {
+      "reaction_time_ms": 238,
+      "accuracy_pct": 40.3,
+      "headshot_pct": 30.8,
+      "actions_per_minute": 162,
+      "kills": 0,
+      "deaths": 0,
+      "assists": 0,
+      "damage": 0
+    },
+    "odds": {},
+    "data": {
+      "window_seconds": 30,
+      "sample_count": 1,
+      "round_number": 1
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 9.5
+    }
+  },
+  "round_ended": {
+    "event_id": "evt_20260927_052158_efbe_000049",
+    "event_type": "round_ended",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.466Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": "round_01",
+    "player_id": null,
+    "team_id": null,
+    "sequence_number": 49,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {},
+    "odds": {},
+    "data": {
+      "round_number": 1,
+      "winner_team_id": "team_blue",
+      "score": {
+        "team_blue": 1,
+        "team_red": 0
+      },
+      "player_summaries": [
+        {
+          "player_id": "player_01",
+          "team_id": "team_red",
+          "kills": 1,
+          "deaths": 1,
+          "assists": 0,
+          "damage": 164
+        },
+        {
+          "player_id": "player_02",
+          "team_id": "team_red",
+          "kills": 0,
+          "deaths": 1,
+          "assists": 0,
+          "damage": 36
+        },
+        {
+          "player_id": "player_03",
+          "team_id": "team_red",
+          "kills": 1,
+          "deaths": 0,
+          "assists": 0,
+          "damage": 109
+        },
+        {
+          "player_id": "player_04",
+          "team_id": "team_red",
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "damage": 0
+        },
+        {
+          "player_id": "player_05",
+          "team_id": "team_red",
+          "kills": 0,
+          "deaths": 1,
+          "assists": 0,
+          "damage": 135
+        },
+        {
+          "player_id": "player_06",
+          "team_id": "team_blue",
+          "kills": 2,
+          "deaths": 1,
+          "assists": 0,
+          "damage": 275
+        },
+        {
+          "player_id": "player_07",
+          "team_id": "team_blue",
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "damage": 26
+        },
+        {
+          "player_id": "player_08",
+          "team_id": "team_blue",
+          "kills": 1,
+          "deaths": 1,
+          "assists": 0,
+          "damage": 101
+        },
+        {
+          "player_id": "player_09",
+          "team_id": "team_blue",
+          "kills": 0,
+          "deaths": 0,
+          "assists": 1,
+          "damage": 0
+        },
+        {
+          "player_id": "player_10",
+          "team_id": "team_blue",
+          "kills": 0,
+          "deaths": 0,
+          "assists": 0,
+          "damage": 0
+        }
+      ]
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 24
+    }
+  },
+  "match_ended": {
+    "event_id": "evt_20260927_052158_efbe_000242",
+    "event_type": "match_ended",
+    "schema_version": "1.0",
+    "timestamp": "2026-09-27T05:21:58.468Z",
+    "tournament_id": "tournament_001",
+    "match_id": "match_20260927_052158_efbe",
+    "round_id": null,
+    "player_id": null,
+    "team_id": null,
+    "sequence_number": 242,
+    "scenario": "normal",
+    "simulator_run_id": "run_20260927_052158_efbe",
+    "metrics": {},
+    "odds": {},
+    "data": {
+      "winner_team_id": "team_blue",
+      "final_score": {
+        "team_blue": 4,
+        "team_red": 1
+      },
+      "total_rounds": 5,
+      "duration_seconds": 120.5,
+      "player_summaries": [
+        {
+          "player_id": "player_01",
+          "team_id": "team_red",
+          "kills": 5,
+          "deaths": 4,
+          "assists": 1,
+          "damage": 789,
+          "avg_reaction_time_ms": 223,
+          "avg_accuracy_pct": 47.4,
+          "avg_headshot_pct": 33.5,
+          "avg_actions_per_minute": 150
+        },
+        {
+          "player_id": "player_02",
+          "team_id": "team_red",
+          "kills": 0,
+          "deaths": 4,
+          "assists": 1,
+          "damage": 170,
+          "avg_reaction_time_ms": 249,
+          "avg_accuracy_pct": 42.4,
+          "avg_headshot_pct": 24.2,
+          "avg_actions_per_minute": 165
+        },
+        {
+          "player_id": "player_03",
+          "team_id": "team_red",
+          "kills": 4,
+          "deaths": 5,
+          "assists": 0,
+          "damage": 639,
+          "avg_reaction_time_ms": 243,
+          "avg_accuracy_pct": 38.1,
+          "avg_headshot_pct": 20.6,
+          "avg_actions_per_minute": 133
+        },
+        {
+          "player_id": "player_04",
+          "team_id": "team_red",
+          "kills": 4,
+          "deaths": 3,
+          "assists": 1,
+          "damage": 571,
+          "avg_reaction_time_ms": 214,
+          "avg_accuracy_pct": 52.3,
+          "avg_headshot_pct": 39.3,
+          "avg_actions_per_minute": 121
+        },
+        {
+          "player_id": "player_05",
+          "team_id": "team_red",
+          "kills": 3,
+          "deaths": 5,
+          "assists": 1,
+          "damage": 630,
+          "avg_reaction_time_ms": 236,
+          "avg_accuracy_pct": 45.1,
+          "avg_headshot_pct": 26.7,
+          "avg_actions_per_minute": 140
+        },
+        {
+          "player_id": "player_06",
+          "team_id": "team_blue",
+          "kills": 6,
+          "deaths": 3,
+          "assists": 1,
+          "damage": 843,
+          "avg_reaction_time_ms": 228,
+          "avg_accuracy_pct": 45.1,
+          "avg_headshot_pct": 28.6,
+          "avg_actions_per_minute": 160
+        },
+        {
+          "player_id": "player_07",
+          "team_id": "team_blue",
+          "kills": 2,
+          "deaths": 3,
+          "assists": 0,
+          "damage": 342,
+          "avg_reaction_time_ms": 236,
+          "avg_accuracy_pct": 47.6,
+          "avg_headshot_pct": 29.7,
+          "avg_actions_per_minute": 149
+        },
+        {
+          "player_id": "player_08",
+          "team_id": "team_blue",
+          "kills": 4,
+          "deaths": 2,
+          "assists": 3,
+          "damage": 580,
+          "avg_reaction_time_ms": 243,
+          "avg_accuracy_pct": 39.6,
+          "avg_headshot_pct": 21.1,
+          "avg_actions_per_minute": 137
+        },
+        {
+          "player_id": "player_09",
+          "team_id": "team_blue",
+          "kills": 5,
+          "deaths": 3,
+          "assists": 2,
+          "damage": 777,
+          "avg_reaction_time_ms": 212,
+          "avg_accuracy_pct": 52.2,
+          "avg_headshot_pct": 39.8,
+          "avg_actions_per_minute": 119
+        },
+        {
+          "player_id": "player_10",
+          "team_id": "team_blue",
+          "kills": 4,
+          "deaths": 5,
+          "assists": 2,
+          "damage": 707,
+          "avg_reaction_time_ms": 232,
+          "avg_accuracy_pct": 47,
+          "avg_headshot_pct": 28.6,
+          "avg_actions_per_minute": 140
+        }
+      ]
+    },
+    "metadata": {
+      "map": "arena_alpha",
+      "source": "group13_simulator",
+      "simulator_version": "1.0.0",
+      "match_clock_seconds": 120.5
+    }
+  }
+}

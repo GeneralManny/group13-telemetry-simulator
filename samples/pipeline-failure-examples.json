@@ -1,0 +1,185 @@
+{
+  "stale_timestamp": {
+    "delay_ms": 0,
+    "payload": {
+      "event_id": "evt_20260927_052158_2de6_000004",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:11:58.475Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_2de6",
+      "round_id": "round_01",
+      "player_id": "player_05",
+      "team_id": "team_red",
+      "sequence_number": 4,
+      "scenario": "pipeline_failure",
+      "simulator_run_id": "run_20260927_052158_2de6",
+      "metrics": {
+        "damage": 41,
+        "reaction_time_ms": 251
+      },
+      "odds": {},
+      "data": {
+        "result": "damage",
+        "target_player_id": "player_09",
+        "target_team_id": "team_blue",
+        "weapon": "ability_blast",
+        "headshot": false,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 1.5
+      }
+    }
+  },
+  "malformed": {
+    "delay_ms": 0,
+    "payload": {
+      "event_id": "evt_20260927_052158_2de6_000009",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.475Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_2de6",
+      "round_id": "round_01",
+      "player_id": "player_06",
+      "team_id": "team_blue",
+      "sequence_number": "seq-9",
+      "scenario": "pipeline_failure",
+      "simulator_run_id": "run_20260927_052158_2de6",
+      "metrics": {
+        "reaction_time_ms": 230,
+        "accuracy_pct": 40.1,
+        "headshot_pct": 33.1,
+        "actions_per_minute": 155
+      },
+      "odds": {},
+      "data": {
+        "action_type": "reload",
+        "position": {
+          "x": 85.2,
+          "y": 17.1
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 4
+      }
+    }
+  },
+  "duplicate": {
+    "delay_ms": 250,
+    "payload": {
+      "event_id": "evt_20260927_052158_2de6_000013",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.475Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_2de6",
+      "round_id": "round_01",
+      "player_id": "player_06",
+      "team_id": "team_blue",
+      "sequence_number": 13,
+      "scenario": "pipeline_failure",
+      "simulator_run_id": "run_20260927_052158_2de6",
+      "metrics": {
+        "damage": 21,
+        "reaction_time_ms": 224
+      },
+      "odds": {},
+      "data": {
+        "result": "damage",
+        "target_player_id": "player_02",
+        "target_team_id": "team_red",
+        "weapon": "ability_blast",
+        "headshot": false,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 6
+      }
+    }
+  },
+  "delayed": {
+    "delay_ms": 8000,
+    "payload": {
+      "event_id": "evt_20260927_052158_2de6_000020",
+      "event_type": "player_snapshot",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.475Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_2de6",
+      "round_id": "round_01",
+      "player_id": "player_01",
+      "team_id": "team_red",
+      "sequence_number": 20,
+      "scenario": "pipeline_failure",
+      "simulator_run_id": "run_20260927_052158_2de6",
+      "metrics": {
+        "reaction_time_ms": 238,
+        "accuracy_pct": 40.3,
+        "headshot_pct": 30.8,
+        "actions_per_minute": 162,
+        "kills": 0,
+        "deaths": 0,
+        "assists": 0,
+        "damage": 0
+      },
+      "odds": {},
+      "data": {
+        "window_seconds": 30,
+        "sample_count": 1,
+        "round_number": 1
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 9.5
+      }
+    }
+  },
+  "missing_field": {
+    "delay_ms": 0,
+    "payload": {
+      "event_id": "evt_20260927_052158_2de6_000056",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_2de6",
+      "round_id": "round_02",
+      "player_id": "player_02",
+      "team_id": "team_red",
+      "sequence_number": 56,
+      "scenario": "pipeline_failure",
+      "simulator_run_id": "run_20260927_052158_2de6",
+      "metrics": {
+        "damage": 56,
+        "reaction_time_ms": 246
+      },
+      "odds": {},
+      "data": {
+        "result": "damage",
+        "target_player_id": "player_06",
+        "target_team_id": "team_blue",
+        "weapon": "vandal_rifle",
+        "headshot": false,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 27.5
+      }
+    }
+  }
+}

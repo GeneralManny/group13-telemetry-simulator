@@ -1,0 +1,966 @@
+{
+  "truth": {
+    "performance": {
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "direction": "over",
+      "start_second": 90,
+      "end_second": null,
+      "first_sequence_number": 182
+    },
+    "odds": null
+  },
+  "note": "player_07 events from 60s to 150s of match clock",
+  "events": [
+    {
+      "event_id": "evt_20260927_052158_077e_000130",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.469Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_03",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 130,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 234,
+        "accuracy_pct": 45.7,
+        "headshot_pct": 28.1,
+        "actions_per_minute": 159
+      },
+      "odds": {},
+      "data": {
+        "action_type": "aim",
+        "position": {
+          "x": 23,
+          "y": 65.5
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 64.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000133",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.469Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_03",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 133,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 266,
+        "accuracy_pct": 50,
+        "headshot_pct": 31.4,
+        "actions_per_minute": 160
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 97.5,
+          "y": 56.5
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 66
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000140",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.469Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_03",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 140,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 57,
+        "reaction_time_ms": 225
+      },
+      "odds": {},
+      "data": {
+        "result": "damage",
+        "target_player_id": "player_05",
+        "target_team_id": "team_red",
+        "weapon": "vandal_rifle",
+        "headshot": false,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 69.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000145",
+      "event_type": "player_snapshot",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.469Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_03",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 145,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 227,
+        "accuracy_pct": 47,
+        "headshot_pct": 33.8,
+        "actions_per_minute": 151,
+        "kills": 1,
+        "deaths": 3,
+        "assists": 0,
+        "damage": 232
+      },
+      "odds": {},
+      "data": {
+        "window_seconds": 30,
+        "sample_count": 5,
+        "round_number": 3
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 72
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000162",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.469Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_04",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 162,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 210,
+        "accuracy_pct": 54.5,
+        "headshot_pct": 20.6,
+        "actions_per_minute": 143
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 15.7,
+          "y": 94.6
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 80.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000179",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.469Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_04",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 179,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 260,
+        "accuracy_pct": 54.5,
+        "headshot_pct": 23.7,
+        "actions_per_minute": 165
+      },
+      "odds": {},
+      "data": {
+        "action_type": "ability",
+        "position": {
+          "x": 23.1,
+          "y": 10.4
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 89
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000182",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_04",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 182,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 139,
+        "reaction_time_ms": 119
+      },
+      "odds": {},
+      "data": {
+        "result": "kill",
+        "target_player_id": "player_03",
+        "target_team_id": "team_red",
+        "weapon": "sheriff_pistol",
+        "headshot": false,
+        "assist_player_id": "player_10"
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 90.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000185",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_04",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 185,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 123,
+        "reaction_time_ms": 118
+      },
+      "odds": {},
+      "data": {
+        "result": "kill",
+        "target_player_id": "player_05",
+        "target_team_id": "team_red",
+        "weapon": "phantom_smg",
+        "headshot": true,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 92
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000192",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_04",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 192,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 129,
+        "accuracy_pct": 74.4,
+        "headshot_pct": 67.7,
+        "actions_per_minute": 137
+      },
+      "odds": {},
+      "data": {
+        "action_type": "move",
+        "position": {
+          "x": 21.5,
+          "y": 57.1
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 95.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000195",
+      "event_type": "player_snapshot",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_04",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 195,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 177,
+        "accuracy_pct": 63.1,
+        "headshot_pct": 46.8,
+        "actions_per_minute": 156,
+        "kills": 3,
+        "deaths": 3,
+        "assists": 0,
+        "damage": 494
+      },
+      "odds": {},
+      "data": {
+        "window_seconds": 30,
+        "sample_count": 6,
+        "round_number": 4
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 97
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000208",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 208,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 114,
+        "accuracy_pct": 82,
+        "headshot_pct": 70.8,
+        "actions_per_minute": 162
+      },
+      "odds": {},
+      "data": {
+        "action_type": "aim",
+        "position": {
+          "x": 27.6,
+          "y": 28.8
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 103.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000213",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 213,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 122,
+        "reaction_time_ms": 120
+      },
+      "odds": {},
+      "data": {
+        "result": "kill",
+        "target_player_id": "player_05",
+        "target_team_id": "team_red",
+        "weapon": "sheriff_pistol",
+        "headshot": true,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 106
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000216",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 216,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 98,
+        "accuracy_pct": 83.2,
+        "headshot_pct": 62.8,
+        "actions_per_minute": 170
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 80.5,
+          "y": 7.8
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 107.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000218",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 218,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 120,
+        "accuracy_pct": 79.4,
+        "headshot_pct": 65.2,
+        "actions_per_minute": 159
+      },
+      "odds": {},
+      "data": {
+        "action_type": "ability",
+        "position": {
+          "x": 8.1,
+          "y": 51.6
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 108.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000232",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 232,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 64,
+        "reaction_time_ms": 103
+      },
+      "odds": {},
+      "data": {
+        "result": "damage",
+        "target_player_id": "player_05",
+        "target_team_id": "team_red",
+        "weapon": "phantom_smg",
+        "headshot": false,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 115.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000235",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 235,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 93,
+        "accuracy_pct": 80.1,
+        "headshot_pct": 64.2,
+        "actions_per_minute": 139
+      },
+      "odds": {},
+      "data": {
+        "action_type": "move",
+        "position": {
+          "x": 38.7,
+          "y": 32.2
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 117
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000238",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 238,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 124,
+        "accuracy_pct": 82.1,
+        "headshot_pct": 66.1,
+        "actions_per_minute": 159
+      },
+      "odds": {},
+      "data": {
+        "action_type": "move",
+        "position": {
+          "x": 9.3,
+          "y": 21.6
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 118.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000248",
+      "event_type": "player_snapshot",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 248,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 113,
+        "accuracy_pct": 80.2,
+        "headshot_pct": 66.8,
+        "actions_per_minute": 152,
+        "kills": 4,
+        "deaths": 3,
+        "assists": 0,
+        "damage": 680
+      },
+      "odds": {},
+      "data": {
+        "window_seconds": 30,
+        "sample_count": 8,
+        "round_number": 5
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 123.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000249",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_05",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 249,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 103,
+        "accuracy_pct": 77.4,
+        "headshot_pct": 69.4,
+        "actions_per_minute": 155
+      },
+      "odds": {},
+      "data": {
+        "action_type": "reload",
+        "position": {
+          "x": 76.8,
+          "y": 70.1
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 124
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000255",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 255,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 127,
+        "accuracy_pct": 84,
+        "headshot_pct": 65.2,
+        "actions_per_minute": 133
+      },
+      "odds": {},
+      "data": {
+        "action_type": "ability",
+        "position": {
+          "x": 52.4,
+          "y": 68.6
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 127
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000256",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 256,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 115,
+        "reaction_time_ms": 93
+      },
+      "odds": {},
+      "data": {
+        "result": "kill",
+        "target_player_id": "player_03",
+        "target_team_id": "team_red",
+        "weapon": "phantom_smg",
+        "headshot": true,
+        "assist_player_id": "player_08"
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 127.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000262",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 262,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 75,
+        "reaction_time_ms": 115
+      },
+      "odds": {},
+      "data": {
+        "result": "damage",
+        "target_player_id": "player_05",
+        "target_team_id": "team_red",
+        "weapon": "sheriff_pistol",
+        "headshot": true,
+        "assist_player_id": null
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 130.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000264",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 264,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 104,
+        "accuracy_pct": 79.1,
+        "headshot_pct": 62.8,
+        "actions_per_minute": 135
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 49.4,
+          "y": 89.7
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 131.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000270",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 270,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 110,
+        "accuracy_pct": 81.1,
+        "headshot_pct": 72.8,
+        "actions_per_minute": 115
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 23,
+          "y": 95.4
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 134.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000275",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 275,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 108,
+        "accuracy_pct": 80.3,
+        "headshot_pct": 67,
+        "actions_per_minute": 135
+      },
+      "odds": {},
+      "data": {
+        "action_type": "utility",
+        "position": {
+          "x": 93.5,
+          "y": 53.6
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 137
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000284",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 284,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 128,
+        "accuracy_pct": 81,
+        "headshot_pct": 62.3,
+        "actions_per_minute": 135
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 85.8,
+          "y": 61.5
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 141.5
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000287",
+      "event_type": "combat_event",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 287,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "damage": 148,
+        "reaction_time_ms": 98
+      },
+      "odds": {},
+      "data": {
+        "result": "kill",
+        "target_player_id": "player_02",
+        "target_team_id": "team_red",
+        "weapon": "phantom_smg",
+        "headshot": true,
+        "assist_player_id": "player_09"
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 143
+      }
+    },
+    {
+      "event_id": "evt_20260927_052158_077e_000299",
+      "event_type": "player_action",
+      "schema_version": "1.0",
+      "timestamp": "2026-09-27T05:21:58.470Z",
+      "tournament_id": "tournament_001",
+      "match_id": "match_20260927_052158_077e",
+      "round_id": "round_06",
+      "player_id": "player_07",
+      "team_id": "team_blue",
+      "sequence_number": 299,
+      "scenario": "performance_anomaly",
+      "simulator_run_id": "run_20260927_052158_077e",
+      "metrics": {
+        "reaction_time_ms": 124,
+        "accuracy_pct": 80.6,
+        "headshot_pct": 60,
+        "actions_per_minute": 153
+      },
+      "odds": {},
+      "data": {
+        "action_type": "peek",
+        "position": {
+          "x": 89.4,
+          "y": 5.7
+        }
+      },
+      "metadata": {
+        "map": "arena_alpha",
+        "source": "group13_simulator",
+        "simulator_version": "1.0.0",
+        "match_clock_seconds": 149
+      }
+    }
+  ]
+}

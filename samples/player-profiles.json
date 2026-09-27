@@ -1,0 +1,242 @@
+[
+  {
+    "player_id": "player_01",
+    "display_name": "Red One",
+    "team_id": "team_red",
+    "role": "entry",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 225,
+        "stddev": 20
+      },
+      "accuracy_pct": {
+        "mean": 47,
+        "stddev": 5
+      },
+      "headshot_pct": {
+        "mean": 30,
+        "stddev": 6
+      },
+      "actions_per_minute": {
+        "mean": 150,
+        "stddev": 16
+      }
+    }
+  },
+  {
+    "player_id": "player_02",
+    "display_name": "Red Two",
+    "team_id": "team_red",
+    "role": "attacker",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 240,
+        "stddev": 24
+      },
+      "accuracy_pct": {
+        "mean": 43,
+        "stddev": 6
+      },
+      "headshot_pct": {
+        "mean": 24,
+        "stddev": 6
+      },
+      "actions_per_minute": {
+        "mean": 160,
+        "stddev": 20
+      }
+    }
+  },
+  {
+    "player_id": "player_03",
+    "display_name": "Red Three",
+    "team_id": "team_red",
+    "role": "support",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 250,
+        "stddev": 25
+      },
+      "accuracy_pct": {
+        "mean": 40,
+        "stddev": 6
+      },
+      "headshot_pct": {
+        "mean": 20,
+        "stddev": 5
+      },
+      "actions_per_minute": {
+        "mean": 135,
+        "stddev": 15
+      }
+    }
+  },
+  {
+    "player_id": "player_04",
+    "display_name": "Red Four",
+    "team_id": "team_red",
+    "role": "sniper",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 215,
+        "stddev": 18
+      },
+      "accuracy_pct": {
+        "mean": 52,
+        "stddev": 5
+      },
+      "headshot_pct": {
+        "mean": 38,
+        "stddev": 7
+      },
+      "actions_per_minute": {
+        "mean": 120,
+        "stddev": 14
+      }
+    }
+  },
+  {
+    "player_id": "player_05",
+    "display_name": "Red Five",
+    "team_id": "team_red",
+    "role": "anchor",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 235,
+        "stddev": 21
+      },
+      "accuracy_pct": {
+        "mean": 45,
+        "stddev": 6
+      },
+      "headshot_pct": {
+        "mean": 27,
+        "stddev": 6
+      },
+      "actions_per_minute": {
+        "mean": 140,
+        "stddev": 17
+      }
+    }
+  },
+  {
+    "player_id": "player_06",
+    "display_name": "Blue Six",
+    "team_id": "team_blue",
+    "role": "entry",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 228,
+        "stddev": 21
+      },
+      "accuracy_pct": {
+        "mean": 46,
+        "stddev": 5
+      },
+      "headshot_pct": {
+        "mean": 28,
+        "stddev": 6
+      },
+      "actions_per_minute": {
+        "mean": 155,
+        "stddev": 18
+      }
+    }
+  },
+  {
+    "player_id": "player_07",
+    "display_name": "Blue Seven",
+    "team_id": "team_blue",
+    "role": "attacker",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 230,
+        "stddev": 22
+      },
+      "accuracy_pct": {
+        "mean": 46,
+        "stddev": 6
+      },
+      "headshot_pct": {
+        "mean": 29,
+        "stddev": 7
+      },
+      "actions_per_minute": {
+        "mean": 145,
+        "stddev": 18
+      }
+    }
+  },
+  {
+    "player_id": "player_08",
+    "display_name": "Blue Eight",
+    "team_id": "team_blue",
+    "role": "support",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 245,
+        "stddev": 23
+      },
+      "accuracy_pct": {
+        "mean": 42,
+        "stddev": 6
+      },
+      "headshot_pct": {
+        "mean": 22,
+        "stddev": 5
+      },
+      "actions_per_minute": {
+        "mean": 138,
+        "stddev": 15
+      }
+    }
+  },
+  {
+    "player_id": "player_09",
+    "display_name": "Blue Nine",
+    "team_id": "team_blue",
+    "role": "sniper",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 212,
+        "stddev": 17
+      },
+      "accuracy_pct": {
+        "mean": 53,
+        "stddev": 5
+      },
+      "headshot_pct": {
+        "mean": 40,
+        "stddev": 7
+      },
+      "actions_per_minute": {
+        "mean": 118,
+        "stddev": 13
+      }
+    }
+  },
+  {
+    "player_id": "player_10",
+    "display_name": "Blue Ten",
+    "team_id": "team_blue",
+    "role": "anchor",
+    "baseline": {
+      "reaction_time_ms": {
+        "mean": 238,
+        "stddev": 22
+      },
+      "accuracy_pct": {
+        "mean": 44,
+        "stddev": 6
+      },
+      "headshot_pct": {
+        "mean": 26,
+        "stddev": 6
+      },
+      "actions_per_minute": {
+        "mean": 142,
+        "stddev": 16
+      }
+    }
+  }
+]
