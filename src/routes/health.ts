@@ -2,11 +2,12 @@ import type { FastifyInstance } from "fastify";
 import { type AppConfig, checkReadiness } from "../config.js";
 import { SCHEMA_VERSION } from "../contracts/events.js";
 import { SERVICE_NAME, SIMULATOR_VERSION } from "../simulator/ids.js";
+import type { SubscriptionStore } from "../delivery/subscriptions.js";
 import type { SimulatorEngine } from "../simulator/engine.js";
 
 export function registerHealthRoutes(
   app: FastifyInstance,
-  deps: { config: AppConfig; engine: SimulatorEngine },
+  deps: { config: AppConfig; engine: SimulatorEngine; subscriptions: SubscriptionStore },
 ): void {
   const startedAt = Date.now();
 
@@ -19,7 +20,10 @@ export function registerHealthRoutes(
   }));
 
   app.get("/ready", async (_req, reply) => {
-    const r = checkReadiness(deps.config);
+    const r = checkReadiness(deps.config, {
+      enabledWebhooks: deps.subscriptions.enabledCount,
+      webhookStorePersistent: deps.subscriptions.persistent,
+    });
     return reply.code(r.ready ? 200 : 503).send({
       status: r.ready ? "ready" : "not_ready",
       environment: deps.config.nodeEnv,
@@ -30,7 +34,8 @@ export function registerHealthRoutes(
     });
   });
 
-  app.get("/", async () => ({
+  // The dashboard is served at "/". This JSON index is for API clients.
+  app.get("/api", async () => ({
     service: SERVICE_NAME,
     version: SIMULATOR_VERSION,
     schema_version: SCHEMA_VERSION,
@@ -43,6 +48,8 @@ export function registerHealthRoutes(
         "GET /api/v1/players",
         "GET /api/v1/events/recent",
         "GET /api/v1/events/stream",
+        "GET /api/v1/timeline?player=player_07",
+        "GET /api/v1/session",
       ],
       protected: [
         "POST /api/v1/runs",
@@ -54,7 +61,15 @@ export function registerHealthRoutes(
         "POST /api/v1/runs/:runId/replay",
         "POST /api/v1/test-event",
       ],
+      team_or_control_key: [
+        "GET /api/v1/webhooks",
+        "POST /api/v1/webhooks",
+        "PATCH /api/v1/webhooks/:id",
+        "DELETE /api/v1/webhooks/:id",
+        "POST /api/v1/webhooks/:id/test",
+      ],
     },
+    dashboard: "/",
     notes: "Protected endpoints need X-API-Key. :runId may be 'current'.",
   }));
 }

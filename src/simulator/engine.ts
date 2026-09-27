@@ -7,8 +7,12 @@ import {
   type TestEventRequest,
 } from "../contracts/validation.js";
 import { type AppConfig, usableWebhookUrl } from "../config.js";
-import type { DeliveryQueue, FailedDelivery } from "../delivery/retry-queue.js";
+import type { DeliveryQueue, FailedDelivery, TargetStats } from "../delivery/retry-queue.js";
+import type { SubscriptionStore } from "../delivery/subscriptions.js";
+import { displayUrl } from "../delivery/subscriptions.js";
 import { describeTarget, type SendResult, type WebhookTarget } from "../delivery/webhook-client.js";
+import { getPlayer, PLAYERS } from "../data/players.js";
+import type { PlayerBaseline } from "../data/baselines.js";
 import {
   FaultInjector,
   applySingleFault,
@@ -36,8 +40,10 @@ interface RunRecord {
   config: RunConfig;
   simulator: MatchSimulator;
   faults: FaultInjector | null;
-  target: WebhookTarget;
+  /** Only set for a run started with an explicit webhook_url. */
+  customTarget: WebhookTarget | null;
   targetMode: "configured-default" | "custom" | "none";
+  timeline: Timeline;
   ticker: Ticker;
   state: RunState;
   startedAt: string;
@@ -62,6 +68,45 @@ export interface RunSummary {
   warnings: string[];
 }
 
+interface OddsPoint {
+  t: number;
+  seq: number;
+  team_blue: number;
+  team_red: number;
+  movement_pct: number;
+  reason: string;
+}
+
+interface SamplePoint {
+  t: number;
+  reaction_time_ms: number;
+  accuracy_pct: number;
+  headshot_pct: number;
+  actions_per_minute: number;
+}
+
+interface Timeline {
+  odds: OddsPoint[];
+  rounds: { t: number; round_number: number; winner_team_id: string }[];
+  samples: Map<string, SamplePoint[]>;
+  snapshots: Map<string, { t: number; metrics: Record<string, number> }>;
+}
+
+export interface Destination {
+  id: string;
+  name: string;
+  source: "environment" | "dashboard";
+  host: string;
+  url_display: string;
+  enabled: boolean;
+  event_types: string[] | null;
+  token_set: boolean;
+  created_at: string | null;
+  delivery: TargetStats;
+}
+
+const TIMELINE_LIMIT = 5000;
+
 export interface EmittedEvent {
   emitted_at: string;
   fault: string | null;
@@ -71,6 +116,7 @@ export interface EmittedEvent {
 export interface EngineOptions {
   config: AppConfig;
   delivery: DeliveryQueue;
+  subscriptions: SubscriptionStore;
   logger: Logger;
   /** Overrides the real-time tick interval. Tests use this to run matches quickly. */
   tickIntervalMs?: number;
@@ -112,7 +158,7 @@ export class SimulatorEngine {
         `Run ${this.run.runId} is ${this.run.state}. Stop or reset it before starting another.`,
       );
     }
-    const { target, mode, warnings } = this.resolveTarget(config);
+    const { customTarget, mode, warnings } = this.resolveMode(config);
     const startedAt = this.now();
     const runId = runIdFromToken(createRunToken(startedAt));
     const simulator = new MatchSimulator({
@@ -127,8 +173,9 @@ export class SimulatorEngine {
       config,
       simulator,
       faults: config.failure_modes ? new FaultInjector(config.failure_modes, config.seed) : null,
-      target,
+      customTarget,
       targetMode: mode,
+      timeline: { odds: [], rounds: [], samples: new Map(), snapshots: new Map() },
       ticker: new Ticker(this.opts.tickIntervalMs ?? 1000 / rate, () => this.onTick(record)),
       state: "running",
       startedAt: startedAt.toISOString(),
@@ -227,13 +274,21 @@ export class SimulatorEngine {
   // ---------------------------------------------------------------------------
   // Integration test event
 
-  async sendTestEvent(req: TestEventRequest): Promise<{
+  /**
+   * Sends one event to every current destination (or only `onlyTarget`), one attempt each.
+   * `delivery` is the first result, kept for compatibility; `deliveries` has them all.
+   */
+  async sendTestEvent(
+    req: TestEventRequest,
+    onlyTarget?: WebhookTarget,
+  ): Promise<{
     event: Record<string, unknown>;
     delivery: SendResult | { skipped: true; reason: string };
+    deliveries: { destination_id: string; name: string | null; result: SendResult }[];
   }> {
     const token = createRunToken(this.now());
     const runId = `test_${token}`;
-    const { target } = this.resolveTarget({ webhook_url: req.webhook_url }, true);
+    const { customTarget, mode } = this.resolveMode({ webhook_url: req.webhook_url }, true);
     const simulator = new MatchSimulator({
       runId,
       matchId: `match_test_${token}`,
@@ -255,26 +310,36 @@ export class SimulatorEngine {
       payload,
     });
 
-    if (!target.url) {
+    const targets = onlyTarget
+      ? [onlyTarget]
+      : this.targetsFor(mode, customTarget, event.event_type);
+    if (targets.length === 0) {
       this.opts.logger.info(
         { run_id: runId, event_id: event.event_id },
         "test event generated (dry run)",
       );
       return {
         event: payload,
-        delivery: { skipped: true, reason: "no webhook target configured" },
+        delivery: { skipped: true, reason: "no webhook destination configured" },
+        deliveries: [],
       };
     }
-    const delivery = await this.opts.delivery.sendOnce({
-      runId,
-      target,
-      payload,
-      eventId: event.event_id,
-      eventType: event.event_type,
-      sequence: event.sequence_number,
-      fault: req.fault === "none" ? null : req.fault,
-    });
-    return { event: payload, delivery };
+    const deliveries = await Promise.all(
+      targets.map(async (target) => ({
+        destination_id: target.id ?? "default",
+        name: target.name ?? null,
+        result: await this.opts.delivery.sendOnce({
+          runId,
+          target,
+          payload,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          sequence: event.sequence_number,
+          fault: req.fault === "none" ? null : req.fault,
+        }),
+      })),
+    );
+    return { event: payload, delivery: deliveries[0]!.result, deliveries };
   }
 
   // ---------------------------------------------------------------------------
@@ -285,7 +350,13 @@ export class SimulatorEngine {
     const runId = run?.runId ?? null;
     const d = runId ? this.opts.delivery.stats(runId) : null;
     const defaultUrl = usableWebhookUrl(this.opts.config);
-    const targetUrl = run ? run.target.url : defaultUrl;
+    const mode = run?.targetMode ?? "configured-default";
+    const activeDestinations =
+      mode === "none"
+        ? 0
+        : mode === "custom"
+          ? 1
+          : (defaultUrl ? 1 : 0) + this.opts.subscriptions.enabledCount;
     return {
       service: SERVICE_NAME,
       version: SIMULATOR_VERSION,
@@ -310,11 +381,12 @@ export class SimulatorEngine {
       last_delivery_at: d?.last_delivery_at ?? null,
       last_response_code: d?.last_status_code ?? null,
       last_delivery_error: d?.last_error ?? null,
-      webhook_status: targetUrl ? this.opts.delivery.health() : "disabled",
+      webhook_status: activeDestinations ? this.opts.delivery.health() : "disabled",
       webhook_target: {
-        mode: run?.targetMode ?? (defaultUrl ? "configured-default" : "none"),
-        host: describeTarget(targetUrl),
-        token_configured: Boolean(run ? run.target.token : this.opts.config.webhookToken),
+        mode: activeDestinations ? mode : "none",
+        host: describeTarget(mode === "custom" ? (run?.customTarget?.url ?? null) : defaultUrl),
+        token_configured: Boolean(this.opts.config.webhookToken),
+        destinations: activeDestinations,
       },
       match: run ? run.simulator.progress : null,
       failure_modes_enabled: Boolean(run?.config.failure_modes),
@@ -325,6 +397,96 @@ export class SimulatorEngine {
       recent_delivery_failures: runId ? this.opts.delivery.recentFailures(runId, 5) : [],
       uptime_seconds: Math.round((Date.now() - this.startedAtMs) / 1000),
       server_time: this.now().toISOString(),
+    };
+  }
+
+  /** Every delivery destination: N8N_WEBHOOK_URL first, then dashboard webhooks. */
+  destinations(): Destination[] {
+    const list: Destination[] = [];
+    const defaultUrl = usableWebhookUrl(this.opts.config);
+    if (defaultUrl) {
+      list.push({
+        id: "default",
+        name: "Primary n8n (N8N_WEBHOOK_URL)",
+        source: "environment",
+        ...displayUrl(defaultUrl),
+        enabled: true,
+        event_types: null,
+        token_set: Boolean(this.opts.config.webhookToken),
+        created_at: null,
+        delivery: this.opts.delivery.targetStats("default"),
+      });
+    }
+    for (const s of this.opts.subscriptions.list()) {
+      list.push({
+        id: s.id,
+        name: s.name,
+        source: "dashboard",
+        host: s.host,
+        url_display: s.url_display,
+        enabled: s.enabled,
+        event_types: s.event_types,
+        token_set: s.token_set,
+        created_at: s.created_at,
+        delivery: this.opts.delivery.targetStats(s.id),
+      });
+    }
+    return list;
+  }
+
+  /** The delivery target behind a destination ID ("default" or a dashboard webhook ID). */
+  destinationTarget(id: string): WebhookTarget {
+    if (id !== "default") return this.opts.subscriptions.target(id);
+    const url = usableWebhookUrl(this.opts.config);
+    if (!url) throw new EngineError(404, "webhook_not_found", "N8N_WEBHOOK_URL is not configured.");
+    return { id: "default", name: "Primary n8n", url, token: this.opts.config.webhookToken };
+  }
+
+  /** Chart data for the current run: odds, one player's samples, and latest snapshots. */
+  timeline(playerId = "player_07") {
+    const run = this.run;
+    const player = PLAYERS.some((p) => p.player_id === playerId)
+      ? getPlayer(playerId)
+      : getPlayer("player_07");
+    const base = {
+      player: {
+        player_id: player.player_id,
+        display_name: player.display_name,
+        team_id: player.team_id,
+        baseline: player.baseline as PlayerBaseline,
+        samples: [] as SamplePoint[],
+      },
+    };
+    if (!run) {
+      return {
+        run_id: null,
+        status: this.state,
+        match: null,
+        odds: [],
+        rounds: [],
+        snapshots: [],
+        ...base,
+      };
+    }
+    const tl = run.timeline;
+    return {
+      run_id: run.runId,
+      status: run.state,
+      scenario: run.config.scenario,
+      match: {
+        ...run.simulator.progress,
+        round_length_seconds: run.simulator.roundLength,
+      },
+      odds: tl.odds,
+      rounds: tl.rounds,
+      snapshots: PLAYERS.map((p) => ({
+        player_id: p.player_id,
+        display_name: p.display_name,
+        team_id: p.team_id,
+        baseline: p.baseline,
+        latest: tl.snapshots.get(p.player_id) ?? null,
+      })),
+      player: { ...base.player, samples: tl.samples.get(player.player_id) ?? [] },
     };
   }
 
@@ -413,20 +575,25 @@ export class SimulatorEngine {
       );
       return;
     }
+    this.recordTimeline(run, event);
     const outgoing: OutgoingEvent[] = run.faults ? run.faults.apply(event) : [passThrough(event)];
     for (const o of outgoing) {
       run.eventsGenerated++;
       run.lastEventAt = this.now().toISOString();
-      this.opts.delivery.enqueue({
-        runId: run.runId,
-        target: run.target,
-        payload: o.payload,
-        eventId: o.eventId,
-        eventType: o.eventType,
-        sequence: o.sequence,
-        fault: o.fault,
-        delayMs: o.delayMs,
-      });
+      // Looked up per event, so a webhook added mid-run starts receiving immediately.
+      const targets = this.targetsFor(run.targetMode, run.customTarget, o.eventType);
+      for (const target of targets.length ? targets : [{ url: null, token: null }]) {
+        this.opts.delivery.enqueue({
+          runId: run.runId,
+          target,
+          payload: o.payload,
+          eventId: o.eventId,
+          eventType: o.eventType,
+          sequence: o.sequence,
+          fault: o.fault,
+          delayMs: o.delayMs,
+        });
+      }
       if (o.fault) {
         this.opts.logger.info(
           { run_id: run.runId, event_id: o.eventId, fault: o.fault, delay_ms: o.delayMs },
@@ -435,6 +602,44 @@ export class SimulatorEngine {
       }
       this.record({ emitted_at: run.lastEventAt, fault: o.fault, payload: o.payload });
     }
+  }
+
+  private recordTimeline(run: RunRecord, e: SimulatorEvent): void {
+    const tl = run.timeline;
+    const t = e.metadata.match_clock_seconds;
+    if (e.event_type === "odds_update" && tl.odds.length < TIMELINE_LIMIT) {
+      tl.odds.push({
+        t,
+        seq: e.sequence_number,
+        team_blue: e.odds.team_blue,
+        team_red: e.odds.team_red,
+        movement_pct: e.odds.movement_pct,
+        reason: e.data.reason,
+      });
+    } else if (e.event_type === "player_action") {
+      const list = tl.samples.get(e.player_id) ?? [];
+      if (list.length < TIMELINE_LIMIT) list.push({ t, ...e.metrics });
+      tl.samples.set(e.player_id, list);
+    } else if (e.event_type === "player_snapshot") {
+      tl.snapshots.set(e.player_id, { t, metrics: e.metrics });
+    } else if (e.event_type === "round_ended") {
+      tl.rounds.push({
+        t,
+        round_number: e.data.round_number,
+        winner_team_id: e.data.winner_team_id,
+      });
+    }
+  }
+
+  private targetsFor(
+    mode: RunRecord["targetMode"],
+    customTarget: WebhookTarget | null,
+    eventType: string,
+  ): WebhookTarget[] {
+    if (mode === "none") return [];
+    if (mode === "custom") return customTarget ? [customTarget] : [];
+    const list = usableWebhookUrl(this.opts.config) ? [this.destinationTarget("default")] : [];
+    return list.concat(this.opts.subscriptions.targetsFor(eventType));
   }
 
   private emitStatus(run: RunRecord): void {
@@ -454,42 +659,41 @@ export class SimulatorEngine {
     }
   }
 
-  private resolveTarget(
+  private resolveMode(
     config: Pick<RunConfig, "webhook_url">,
     allowMissing = false,
-  ): { target: WebhookTarget; mode: RunRecord["targetMode"]; warnings: string[] } {
+  ): { customTarget: WebhookTarget | null; mode: RunRecord["targetMode"]; warnings: string[] } {
     const warnings: string[] = [];
     const defaultUrl = usableWebhookUrl(this.opts.config);
-    const token = this.opts.config.webhookToken;
     if (config.webhook_url === "none") {
-      return {
-        target: { url: null, token: null },
-        mode: "none",
-        warnings: ["Dry run: events are not delivered"],
-      };
+      return { customTarget: null, mode: "none", warnings: ["Dry run: events are not delivered"] };
     }
     if (config.webhook_url && config.webhook_url !== "configured-default") {
       // Only send the shared token to the configured n8n origin, never to an arbitrary URL.
       const sameOrigin =
         defaultUrl !== null && new URL(defaultUrl).origin === new URL(config.webhook_url).origin;
       return {
-        target: { url: config.webhook_url, token: sameOrigin ? token : null },
+        customTarget: {
+          id: "custom",
+          name: "Custom URL",
+          url: config.webhook_url,
+          token: sameOrigin ? this.opts.config.webhookToken : null,
+        },
         mode: "custom",
         warnings,
       };
     }
-    if (!defaultUrl) {
+    if (!defaultUrl && this.opts.subscriptions.enabledCount === 0) {
       if (this.opts.config.nodeEnv === "production" && !allowMissing) {
         throw new EngineError(
           503,
           "webhook_not_configured",
-          'N8N_WEBHOOK_URL is not configured. Set it, or pass "webhook_url": "none" for a dry run.',
+          'No webhook destination. Add one in the dashboard (Webhooks tab), set N8N_WEBHOOK_URL, or pass "webhook_url": "none" for a dry run.',
         );
       }
-      warnings.push("N8N_WEBHOOK_URL is not configured: dry run, events are not delivered");
-      return { target: { url: null, token: null }, mode: "none", warnings };
+      warnings.push("No webhook destination yet: events are generated but not delivered");
     }
-    return { target: { url: defaultUrl, token }, mode: "configured-default", warnings };
+    return { customTarget: null, mode: "configured-default", warnings };
   }
 
   private resolveRunId(param: string): string {

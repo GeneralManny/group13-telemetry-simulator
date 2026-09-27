@@ -19,6 +19,19 @@ export interface DeliveryStats {
   last_error: string | null;
 }
 
+/** Delivery results for one destination, across all runs. */
+export interface TargetStats {
+  attempts: number;
+  delivered: number;
+  failed: number;
+  retries: number;
+  last_status_code: number | null;
+  last_error: string | null;
+  last_attempt_at: string | null;
+  last_delivery_at: string | null;
+  health: WebhookHealth;
+}
+
 export interface FailedDelivery {
   event_id: string;
   event_type: string;
@@ -28,6 +41,8 @@ export interface FailedDelivery {
   last_error: string | null;
   failed_at: string;
   fault: FaultType | null;
+  target_id: string;
+  target_name: string | null;
 }
 
 export interface EnqueueInput {
@@ -91,6 +106,10 @@ export class DeliveryQueue {
   private readonly runStats = new Map<string, DeliveryStats>();
   private readonly failures = new Map<string, FailedDelivery[]>();
   private readonly outcomes: boolean[] = [];
+  private readonly targets = new Map<
+    string,
+    { stats: Omit<TargetStats, "health">; outcomes: boolean[] }
+  >();
   private dropLogCount = 0;
   private idleWaiters: (() => void)[] = [];
   private readonly now: () => number;
@@ -159,8 +178,10 @@ export class DeliveryQueue {
     stats.in_flight++;
     const result = await this.attempt(item);
     stats.in_flight--;
-    if (result.ok) stats.delivered++;
-    else this.recordFailure(item, result);
+    if (result.ok) {
+      stats.delivered++;
+      this.targetFor(item).stats.delivered++;
+    } else this.recordFailure(item, result);
     return result;
   }
 
@@ -191,10 +212,47 @@ export class DeliveryQueue {
   }
 
   health(): WebhookHealth {
-    if (this.outcomes.length === 0) return "unknown";
-    const tail = this.outcomes.slice(-FAILING_STREAK);
-    if (tail.length === FAILING_STREAK && tail.every((ok) => !ok)) return "failing";
-    return this.outcomes.every((ok) => ok) ? "healthy" : "degraded";
+    return healthOf(this.outcomes);
+  }
+
+  targetStats(targetId: string): TargetStats {
+    const t = this.targets.get(targetId);
+    if (!t) {
+      return {
+        attempts: 0,
+        delivered: 0,
+        failed: 0,
+        retries: 0,
+        last_status_code: null,
+        last_error: null,
+        last_attempt_at: null,
+        last_delivery_at: null,
+        health: "unknown",
+      };
+    }
+    return { ...t.stats, health: healthOf(t.outcomes) };
+  }
+
+  private targetFor(item: QueueItem) {
+    const id = item.target.id ?? "default";
+    let t = this.targets.get(id);
+    if (!t) {
+      t = {
+        stats: {
+          attempts: 0,
+          delivered: 0,
+          failed: 0,
+          retries: 0,
+          last_status_code: null,
+          last_error: null,
+          last_attempt_at: null,
+          last_delivery_at: null,
+        },
+        outcomes: [],
+      };
+      this.targets.set(id, t);
+    }
+    return t;
   }
 
   /** Resolves when nothing is queued or in flight, or after the timeout. */
@@ -269,6 +327,7 @@ export class DeliveryQueue {
     const stats = this.statsFor(item.runId);
     if (result.ok) {
       stats.delivered++;
+      this.targetFor(item).stats.delivered++;
       return;
     }
     if (result.retryable && item.attempts < this.opts.maxAttempts && !this.closed) {
@@ -276,6 +335,7 @@ export class DeliveryQueue {
       const wait = delays[Math.min(item.attempts - 1, delays.length - 1)] ?? 1000;
       item.notBefore = this.now() + wait;
       stats.retries++;
+      this.targetFor(item).stats.retries++;
       stats.pending++;
       this.queue.push(item);
       return;
@@ -293,9 +353,18 @@ export class DeliveryQueue {
     const stats = this.statsFor(item.runId);
     stats.last_status_code = result.status;
     stats.last_error = result.error;
-    if (result.ok) stats.last_delivery_at = new Date(this.now()).toISOString();
+    const at = new Date(this.now()).toISOString();
+    if (result.ok) stats.last_delivery_at = at;
     this.outcomes.push(result.ok);
     if (this.outcomes.length > HEALTH_WINDOW) this.outcomes.shift();
+    const target = this.targetFor(item);
+    target.stats.attempts++;
+    target.stats.last_status_code = result.status;
+    target.stats.last_error = result.error;
+    target.stats.last_attempt_at = at;
+    if (result.ok) target.stats.last_delivery_at = at;
+    target.outcomes.push(result.ok);
+    if (target.outcomes.length > HEALTH_WINDOW) target.outcomes.shift();
 
     const log = {
       run_id: item.runId,
@@ -308,6 +377,7 @@ export class DeliveryQueue {
       error: result.error,
       duration_ms: result.durationMs,
       fault: item.fault,
+      target_id: item.target.id ?? "default",
     };
     if (result.ok) this.opts.logger.info(log, "event delivered");
     else this.opts.logger.warn(log, "event delivery attempt failed");
@@ -317,6 +387,7 @@ export class DeliveryQueue {
   private recordFailure(item: QueueItem, result: SendResult): void {
     const stats = this.statsFor(item.runId);
     stats.failed++;
+    this.targetFor(item).stats.failed++;
     const list = this.failures.get(item.runId) ?? [];
     list.push({
       event_id: item.eventId,
@@ -327,6 +398,8 @@ export class DeliveryQueue {
       last_error: result.error,
       failed_at: new Date(this.now()).toISOString(),
       fault: item.fault,
+      target_id: item.target.id ?? "default",
+      target_name: item.target.name ?? null,
     });
     if (list.length > MAX_RECENT_FAILURES) list.shift();
     this.failures.set(item.runId, list);
@@ -339,6 +412,7 @@ export class DeliveryQueue {
         attempts: item.attempts,
         status_code: result.status,
         error: result.error,
+        target_id: item.target.id ?? "default",
       },
       "event delivery failed permanently",
     );
@@ -350,4 +424,11 @@ export class DeliveryQueue {
     this.idleWaiters = [];
     for (const w of waiters) w();
   }
+}
+
+function healthOf(outcomes: boolean[]): WebhookHealth {
+  if (outcomes.length === 0) return "unknown";
+  const tail = outcomes.slice(-FAILING_STREAK);
+  if (tail.length === FAILING_STREAK && tail.every((ok) => !ok)) return "failing";
+  return outcomes.every((ok) => ok) ? "healthy" : "degraded";
 }

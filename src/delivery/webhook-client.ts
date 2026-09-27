@@ -1,6 +1,9 @@
 import { SERVICE_NAME, SIMULATOR_VERSION } from "../simulator/ids.js";
 
 export interface WebhookTarget {
+  /** "default" for N8N_WEBHOOK_URL, the subscription ID for dashboard webhooks. */
+  id?: string;
+  name?: string;
   /** null means dry-run: events are generated and logged but not sent. */
   url: string | null;
   token: string | null;

@@ -1,8 +1,12 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import type { FastifyReply, FastifyRequest } from "fastify";
-import { type AppConfig, usableControlKey } from "../config.js";
+import type { FastifyReply, FastifyRequest, preHandlerHookHandler } from "fastify";
+import { type AppConfig, usableControlKey, usableTeamKey } from "../config.js";
+
+export type Role = "admin" | "team";
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
+const matches = (provided: Buffer, expected: Buffer | null) =>
+  expected !== null && timingSafeEqual(provided, expected);
 
 function presentedKey(req: FastifyRequest): string | null {
   const header = req.headers["x-api-key"];
@@ -12,33 +16,61 @@ function presentedKey(req: FastifyRequest): string | null {
   return null;
 }
 
-/**
- * Protects control endpoints with CONTROL_API_KEY, sent as `X-API-Key: <key>` or
- * `Authorization: Bearer <key>`. Without a key, production refuses all control calls
- * and development allows them (with a warning at startup).
- */
-export function createControlAuth(config: AppConfig) {
-  const key = usableControlKey(config);
-  const expected = key ? digest(key) : null;
+export interface Auth {
+  /** CONTROL_API_KEY only: runs, test events, everything. */
+  admin: preHandlerHookHandler;
+  /** CONTROL_API_KEY or TEAM_ACCESS_KEY: webhook management. */
+  team: preHandlerHookHandler;
+  /** The role for a request, "invalid" for a wrong key, or null when no key was sent. */
+  roleOf(req: FastifyRequest): Role | "invalid" | null;
+  /** True in development when no control key is configured, so everything is open. */
+  open: boolean;
+}
 
-  return async function controlAuth(req: FastifyRequest, reply: FastifyReply) {
-    if (!expected) {
-      if (config.nodeEnv === "production") {
+/**
+ * Keys are sent as `X-API-Key: <key>` or `Authorization: Bearer <key>`. Without a control
+ * key, production refuses protected calls and development allows them (with a warning).
+ */
+export function createAuth(config: AppConfig): Auth {
+  const adminKey = usableControlKey(config);
+  const teamKey = usableTeamKey(config);
+  const adminDigest = adminKey ? digest(adminKey) : null;
+  const teamDigest = teamKey ? digest(teamKey) : null;
+  const open = !adminDigest && config.nodeEnv !== "production";
+
+  const roleOf = (req: FastifyRequest): Role | "invalid" | null => {
+    const provided = presentedKey(req);
+    if (!provided) return open ? "admin" : null;
+    const d = digest(provided);
+    if (matches(d, adminDigest)) return "admin";
+    if (matches(d, teamDigest)) return "team";
+    return open ? "admin" : "invalid";
+  };
+
+  const guard = (allowed: Role[]) =>
+    async function (req: FastifyRequest, reply: FastifyReply) {
+      if (!adminDigest && config.nodeEnv === "production") {
         return reply.code(503).send({
           error: "control_api_not_configured",
           message: "CONTROL_API_KEY is not configured on the server.",
         });
       }
-      return;
-    }
-    const provided = presentedKey(req);
-    if (!provided || !timingSafeEqual(digest(provided), expected)) {
+      const role = roleOf(req);
+      if (role === "admin" || (role === "team" && allowed.includes("team"))) return;
+      if (role === "team") {
+        return reply.code(403).send({
+          error: "forbidden",
+          message: "The team key can manage webhooks only. Use the control key for runs.",
+        });
+      }
       return reply.code(401).send({
         error: "unauthorized",
-        message: provided
-          ? "Invalid API key."
-          : "Missing API key. Send it as X-API-Key or Authorization: Bearer.",
+        message:
+          role === "invalid"
+            ? "Invalid API key."
+            : "Missing API key. Send it as X-API-Key or Authorization: Bearer.",
       });
-    }
-  };
+    };
+
+  return { admin: guard(["admin"]), team: guard(["admin", "team"]), roleOf, open };
 }

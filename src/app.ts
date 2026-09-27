@@ -1,15 +1,21 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import cors from "@fastify/cors";
+import fastifyStatic from "@fastify/static";
 import Fastify, { LogController, type FastifyBaseLogger, type FastifyInstance } from "fastify";
 import { pino, type Logger } from "pino";
 import type { AppConfig } from "./config.js";
 import { RequestValidationError } from "./contracts/validation.js";
 import { DeliveryQueue } from "./delivery/retry-queue.js";
+import { SubscriptionError, SubscriptionStore } from "./delivery/subscriptions.js";
 import { createWebhookSender, type Sender } from "./delivery/webhook-client.js";
-import { createControlAuth } from "./routes/auth.js";
+import { createAuth } from "./routes/auth.js";
 import { registerEventRoutes } from "./routes/events.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerRunRoutes } from "./routes/runs.js";
 import { registerStatusRoutes } from "./routes/status.js";
+import { registerWebhookRoutes } from "./routes/webhooks.js";
 import { EngineError, SimulatorEngine } from "./simulator/engine.js";
 
 export interface AppDeps {
@@ -24,6 +30,7 @@ export interface BuiltApp {
   app: FastifyInstance;
   engine: SimulatorEngine;
   delivery: DeliveryQueue;
+  subscriptions: SubscriptionStore;
 }
 
 /** Headers that must never reach the logs. */
@@ -45,7 +52,52 @@ export function createLogger(config: AppConfig): Logger {
   });
 }
 
-const QUIET_PATHS = new Set(["/health", "/ready", "/api/v1/status", "/api/v1/events/recent"]);
+const QUIET_PATHS = new Set([
+  "/health",
+  "/ready",
+  "/api/v1/status",
+  "/api/v1/events/recent",
+  "/api/v1/timeline",
+  "/api/v1/session",
+  "/api/v1/webhooks",
+]);
+
+/** The Next.js static export, built from dashboard/ (npm run build:dashboard). */
+const DASHBOARD_DIR = join(import.meta.dirname, "..", "dashboard", "out");
+
+/**
+ * The dashboard only loads its own files and calls its own API. Next.js inlines a few
+ * bootstrap scripts, so those are allowed by hash rather than with 'unsafe-inline'.
+ * Inline style attributes (chart widths, colours) are allowed.
+ */
+function contentSecurityPolicy(scriptHashes: string[]): string {
+  return [
+    "default-src 'self'",
+    `script-src 'self' ${scriptHashes.join(" ")}`.trim(),
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'none'",
+    "form-action 'self'",
+  ].join("; ");
+}
+
+function inlineScriptHashes(dir: string): string[] {
+  const hashes = new Set<string>();
+  for (const file of readdirSync(dir).filter((f) => f.endsWith(".html"))) {
+    const html = readFileSync(join(dir, file), "utf8");
+    for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+      if (m[1]) hashes.add(`'sha256-${createHash("sha256").update(m[1]).digest("base64")}'`);
+    }
+  }
+  return [...hashes];
+}
+
+const FALLBACK_PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Simulator</title></head>
+<body style="font-family:system-ui;padding:32px;background:#f6f6f3;color:#0b0b0b">
+<h1>Group 13 simulator</h1><p>The API is running. The dashboard has not been built:
+run <code>npm run build:dashboard</code>. API index: <a href="/api">/api</a>.</p></body></html>`;
 
 export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   const { config } = deps;
@@ -59,9 +111,16 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
     retryDelaysMs: config.retryDelaysMs,
     concurrency: config.deliveryConcurrency,
   });
+  const subscriptions = new SubscriptionStore({
+    filePath: config.dataDir ? join(config.dataDir, "webhooks.json") : null,
+    logger: logger.child({ component: "webhooks" }),
+    maxSubscriptions: config.maxWebhooks,
+    production: config.nodeEnv === "production",
+  });
   const engine = new SimulatorEngine({
     config,
     delivery,
+    subscriptions,
     logger: logger.child({ component: "engine" }),
     tickIntervalMs: deps.tickIntervalMs,
   });
@@ -89,8 +148,17 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
 
   await app.register(cors, {
     origin: config.allowedOrigins.length ? config.allowedOrigins : false,
-    methods: ["GET", "POST", "OPTIONS"],
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["content-type", "x-api-key", "authorization"],
+  });
+
+  const dashboardBuilt = existsSync(join(DASHBOARD_DIR, "index.html"));
+  const csp = contentSecurityPolicy(dashboardBuilt ? inlineScriptHashes(DASHBOARD_DIR) : []);
+
+  app.addHook("onSend", async (_req, reply) => {
+    reply.header("content-security-policy", csp);
+    reply.header("x-content-type-options", "nosniff");
+    reply.header("referrer-policy", "no-referrer");
   });
 
   app.addHook("onResponse", async (req, reply) => {
@@ -106,6 +174,9 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   });
 
   app.setErrorHandler((error, req, reply) => {
+    if (error instanceof SubscriptionError) {
+      return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+    }
     if (error instanceof EngineError) {
       return reply.code(error.statusCode).send({ error: error.code, message: error.message });
     }
@@ -127,11 +198,31 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
     reply.code(404).send({ error: "not_found", message: `No route for ${req.method} ${req.url}` }),
   );
 
-  const auth = createControlAuth(config);
-  registerHealthRoutes(app, { config, engine });
+  const auth = createAuth(config);
+  registerHealthRoutes(app, { config, engine, subscriptions });
   registerStatusRoutes(app, { engine });
   registerRunRoutes(app, { config, engine, auth });
   registerEventRoutes(app, { config, engine });
+  registerWebhookRoutes(app, { engine, subscriptions, auth });
 
-  return { app, engine, delivery };
+  // Dashboard. Files are registered individually (no wildcard) so unknown paths still 404 as JSON.
+  if (dashboardBuilt) {
+    await app.register(fastifyStatic, {
+      root: DASHBOARD_DIR,
+      prefix: "/",
+      wildcard: false,
+      index: ["index.html"],
+      cacheControl: false,
+      setHeaders: (res, path) =>
+        res.header(
+          "cache-control",
+          path.includes("/_next/static/") ? "public, max-age=31536000, immutable" : "no-cache",
+        ),
+    });
+  } else {
+    logger.warn("dashboard not built; serving a placeholder page at /");
+    app.get("/", async (_req, reply) => reply.type("text/html").send(FALLBACK_PAGE));
+  }
+
+  return { app, engine, delivery, subscriptions };
 }

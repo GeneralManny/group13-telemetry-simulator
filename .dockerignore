@@ -7,3 +7,6 @@ tests
 !.env.example
 .git
 *.log
+dashboard/node_modules
+dashboard/.next
+dashboard/out

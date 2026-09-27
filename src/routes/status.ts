@@ -16,6 +16,10 @@ export function registerStatusRoutes(
 ): void {
   app.get("/api/v1/status", async () => deps.engine.status());
 
+  app.get<{ Querystring: { player?: string } }>("/api/v1/timeline", async (req) =>
+    deps.engine.timeline(req.query.player),
+  );
+
   app.get("/api/v1/scenarios", async () => ({
     schema_version: SCHEMA_VERSION,
     scenarios: Object.values(SCENARIOS).map((s) => ({

@@ -1,0 +1,415 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { ApiError, api } from "@/lib/api";
+import { HEALTH_LABEL, ago, count, healthTone, randomToken, titleCase } from "@/lib/format";
+import type { Destination, SendResult, Session } from "@/lib/types";
+import { CopyButton, Icon, StatusChip, usePoll, type Notify } from "./ui";
+
+interface Props {
+  session: Session | null;
+  accessKey: string | null;
+  eventTypes: string[];
+  notify: Notify;
+  onUnlock: () => void;
+}
+
+interface WebhookList {
+  destinations: Destination[];
+  persistent: boolean;
+  persist_error: string | null;
+}
+
+export function Webhooks({ session, accessKey, eventTypes, notify, onUnlock }: Props) {
+  const allowed = Boolean(session?.can_manage_webhooks);
+  const [data, setData] = useState<WebhookList | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = async () => {
+    if (!allowed) return;
+    try {
+      setData(await api<WebhookList>("/api/v1/webhooks", { key: accessKey }));
+      setLoadError(null);
+    } catch (err) {
+      setLoadError((err as Error).message);
+    }
+  };
+  usePoll(load, 4000, [accessKey, allowed], allowed);
+
+  return (
+    <div className="stack-lg">
+      <div className="section-intro">
+        <h1>Connect your n8n workflow</h1>
+        <p>
+          Add your n8n Webhook URL and the simulator sends every event to it as JSON, one event per
+          request, starting with the next event. Use the team key your lead shared with you.
+        </p>
+      </div>
+
+      {!allowed ? (
+        <section className="card locked-card">
+          <Icon name="lock" size={20} />
+          <h2 className="card-title">Unlock to manage webhooks</h2>
+          <p className="card-sub">Enter the team key or the control key.</p>
+          <button type="button" className="btn btn-primary" onClick={onUnlock}>
+            Unlock
+          </button>
+        </section>
+      ) : (
+        <div className="webhooks-grid">
+          <AddWebhook
+            accessKey={accessKey}
+            eventTypes={eventTypes}
+            notify={notify}
+            onAdded={load}
+          />
+          <section className="card" aria-labelledby="dest-title">
+            <div className="card-head">
+              <div>
+                <h2 id="dest-title" className="card-title">
+                  Destinations
+                </h2>
+                <p className="card-sub">Every enabled destination receives each event.</p>
+              </div>
+            </div>
+            {data && !data.persistent && (
+              <p className="notice" data-tone="warning">
+                <Icon name="warning" />
+                Webhooks added here are kept in memory and will be lost if the service restarts.
+              </p>
+            )}
+            {loadError && (
+              <p className="form-error" role="alert">
+                {loadError}
+              </p>
+            )}
+            <ul className="destination-list">
+              {(data?.destinations ?? []).map((d) => (
+                <DestinationRow
+                  key={d.id}
+                  d={d}
+                  accessKey={accessKey}
+                  notify={notify}
+                  onChange={load}
+                />
+              ))}
+            </ul>
+            {data && data.destinations.length === 0 && (
+              <p className="empty">
+                No destinations yet. Add your n8n Webhook URL to start receiving events.
+              </p>
+            )}
+          </section>
+          <SetupSteps />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddWebhook({
+  accessKey,
+  eventTypes,
+  notify,
+  onAdded,
+}: {
+  accessKey: string | null;
+  eventTypes: string[];
+  notify: Notify;
+  onAdded: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [token, setToken] = useState("");
+  const [all, setAll] = useState(true);
+  const [types, setTypes] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [savedToken, setSavedToken] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!all && types.length === 0)
+      return setError("Pick at least one event type, or choose All events.");
+    setBusy(true);
+    try {
+      await api("/api/v1/webhooks", {
+        method: "POST",
+        key: accessKey,
+        body: { name, url, token: token || null, event_types: all ? null : types },
+      });
+      notify(`${name} added. It receives events from now on.`, "good");
+      setSavedToken(token || null);
+      setName("");
+      setUrl("");
+      setToken("");
+      onAdded();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="card" aria-labelledby="add-title">
+      <h2 id="add-title" className="card-title">
+        Add a webhook
+      </h2>
+      <form className="stack" onSubmit={submit} noValidate>
+        <label className="field">
+          <span>Name</span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+            placeholder="Team A ingestion"
+            required
+          />
+        </label>
+        <label className="field">
+          <span>Webhook URL</span>
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            type="url"
+            placeholder="https://your-n8n.app/webhook/..."
+            autoComplete="off"
+            required
+          />
+          <span className="field-hint">
+            In n8n, open the Webhook node and copy the Production URL.
+          </span>
+        </label>
+        <label className="field">
+          <span>Shared token (optional)</span>
+          <span className="input-with-btn">
+            <input
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              maxLength={200}
+              autoComplete="off"
+              placeholder="Sent as X-Simulator-Token"
+            />
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={() => setToken(randomToken())}
+            >
+              Generate
+            </button>
+          </span>
+        </label>
+        <fieldset className="event-types">
+          <legend>Events to receive</legend>
+          <label className="check">
+            <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
+            All events
+          </label>
+          {!all && (
+            <div className="type-options">
+              {eventTypes.map((t) => (
+                <label key={t} className="check">
+                  <input
+                    type="checkbox"
+                    checked={types.includes(t)}
+                    onChange={(e) =>
+                      setTypes((cur) =>
+                        e.target.checked ? [...cur, t] : cur.filter((x) => x !== t),
+                      )
+                    }
+                  />
+                  {titleCase(t)}
+                </label>
+              ))}
+            </div>
+          )}
+        </fieldset>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="form-actions">
+          <button type="submit" className="btn btn-primary" disabled={busy || !name || !url}>
+            {busy ? "Adding" : "Add webhook"}
+          </button>
+        </div>
+      </form>
+      {savedToken && (
+        <div className="token-reveal">
+          <p>
+            <strong>Save this token now.</strong> It is not shown again.
+          </p>
+          <div className="copy-row">
+            <code>{savedToken}</code>
+            <CopyButton text={savedToken} />
+          </div>
+          <p className="field-hint">
+            In the n8n Webhook node set Authentication to Header Auth, name{" "}
+            <code>X-Simulator-Token</code>, and this value.
+          </p>
+          <button
+            type="button"
+            className="btn btn-ghost btn-small"
+            onClick={() => setSavedToken(null)}
+          >
+            I have saved it
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DestinationRow({
+  d,
+  accessKey,
+  notify,
+  onChange,
+}: {
+  d: Destination;
+  accessKey: string | null;
+  notify: Notify;
+  onChange: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    try {
+      await fn();
+    } catch (err) {
+      notify(err instanceof ApiError ? err.message : String(err), "critical");
+    } finally {
+      setBusy(false);
+      onChange();
+    }
+  };
+  const health = d.enabled ? d.delivery.health : "disabled";
+
+  return (
+    <li className="destination">
+      <div className="destination-main">
+        <div className="destination-title">
+          <strong>{d.name}</strong>
+          <span className="tag">
+            {d.source === "environment" ? "Railway variable" : "Dashboard"}
+          </span>
+          {!d.enabled && <span className="tag">Paused</span>}
+        </div>
+        <span className="mono muted">{d.url_display}</span>
+        <span className="muted">
+          {d.event_types ? `${d.event_types.map(titleCase).join(", ")}` : "All events"}
+          {d.token_set ? " · token set" : " · no token"}
+        </span>
+      </div>
+      <div className="destination-stats">
+        <StatusChip tone={d.enabled ? healthTone(health) : "neutral"}>
+          {d.enabled ? HEALTH_LABEL[health] : "Paused"}
+        </StatusChip>
+        <span className="tabular">
+          {count(d.delivery.delivered)} delivered · {count(d.delivery.failed)} failed
+        </span>
+        <span className="muted">
+          {d.delivery.last_status_code
+            ? `Last HTTP ${d.delivery.last_status_code}`
+            : (d.delivery.last_error ?? "No attempts yet")}
+          {d.delivery.last_attempt_at ? `, ${ago(d.delivery.last_attempt_at)}` : ""}
+        </span>
+      </div>
+      <div className="destination-actions">
+        <button
+          type="button"
+          className="btn btn-secondary btn-small"
+          disabled={busy || !d.enabled}
+          onClick={() =>
+            run(async () => {
+              const r = await api<{ delivery: SendResult }>(`/api/v1/webhooks/${d.id}/test`, {
+                method: "POST",
+                key: accessKey,
+                body: {},
+              });
+              if (r.delivery.ok)
+                notify(`${d.name} answered HTTP ${r.delivery.status}. Connected.`, "good");
+              else
+                notify(
+                  `${d.name} did not accept the event: ${r.delivery.error ?? `HTTP ${r.delivery.status}`}`,
+                  "critical",
+                );
+            })
+          }
+        >
+          Test
+        </button>
+        {d.source === "dashboard" && (
+          <>
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  await api(`/api/v1/webhooks/${d.id}`, {
+                    method: "PATCH",
+                    key: accessKey,
+                    body: { enabled: !d.enabled },
+                  });
+                  notify(`${d.name} ${d.enabled ? "paused" : "resumed"}`, "good");
+                })
+              }
+            >
+              {d.enabled ? "Pause" : "Resume"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger btn-small"
+              disabled={busy}
+              onClick={() => {
+                if (!window.confirm(`Remove ${d.name}? It stops receiving events immediately.`))
+                  return;
+                void run(async () => {
+                  await api(`/api/v1/webhooks/${d.id}`, { method: "DELETE", key: accessKey });
+                  notify(`${d.name} removed`, "good");
+                });
+              }}
+            >
+              Remove
+            </button>
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function SetupSteps() {
+  return (
+    <section className="card setup-card" aria-labelledby="setup-title">
+      <h2 id="setup-title" className="card-title">
+        n8n setup in four steps
+      </h2>
+      <ol className="steps">
+        <li>
+          Add a <strong>Webhook</strong> node. HTTP Method <code>POST</code>, Respond{" "}
+          <code>Immediately</code>.
+        </li>
+        <li>
+          Optional: Authentication <code>Header Auth</code>, name <code>X-Simulator-Token</code>,
+          value your token.
+        </li>
+        <li>
+          Activate the workflow and copy the <strong>Production URL</strong>, not the Test URL.
+        </li>
+        <li>
+          Add it here and press <strong>Test</strong>. HTTP 200 means you are connected.
+        </li>
+      </ol>
+      <p className="field-hint">
+        Deduplicate on <code>event_id</code>, because retries reuse it. Order by{" "}
+        <code>sequence_number</code> within <code>simulator_run_id</code>. Failed deliveries are
+        retried after 1, 3 and 10 seconds.
+      </p>
+    </section>
+  );
+}

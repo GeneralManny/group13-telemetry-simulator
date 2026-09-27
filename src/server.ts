@@ -13,10 +13,13 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-const { app, engine } = await buildApp({ config, logger });
+const { app, engine, subscriptions } = await buildApp({ config, logger });
 
 // Variable names only. Values (secrets) are never logged.
-const readiness = checkReadiness(config);
+const readiness = checkReadiness(config, {
+  enabledWebhooks: subscriptions.enabledCount,
+  webhookStorePersistent: subscriptions.persistent,
+});
 logger.info(
   {
     version: SIMULATOR_VERSION,

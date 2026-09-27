@@ -6,3 +6,9 @@ coverage/
 !.env.example
 *.log
 .DS_Store
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/next-env.d.ts
+dashboard/*.tsbuildinfo
+data/

@@ -138,8 +138,26 @@ describe("environment configuration", () => {
         CONTROL_API_KEY: "a-long-enough-secret-key",
         N8N_WEBHOOK_TOKEN: "token",
       }),
+      { enabledWebhooks: 0, webhookStorePersistent: true },
     );
     expect(r).toEqual({ ready: true, missing: [], invalid: [], warnings: [] });
+  });
+
+  it("is ready in production with a dashboard webhook instead of N8N_WEBHOOK_URL", () => {
+    const r = checkReadiness(
+      loadConfig({ NODE_ENV: "production", CONTROL_API_KEY: "a-long-enough-secret-key" }),
+      { enabledWebhooks: 1, webhookStorePersistent: true },
+    );
+    expect(r.ready).toBe(true);
+    expect(r.missing).toEqual([]);
+  });
+
+  it("warns when dashboard webhooks would not survive a restart", () => {
+    const r = checkReadiness(
+      loadConfig({ NODE_ENV: "production", CONTROL_API_KEY: "a-long-enough-secret-key" }),
+      { enabledWebhooks: 1, webhookStorePersistent: false },
+    );
+    expect(r.warnings.join(" ")).toContain("DATA_DIR");
   });
 
   it("never includes secret values in readiness output", () => {

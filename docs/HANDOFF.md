@@ -9,6 +9,20 @@ and webhook token through a private channel, never in this file or the repositor
   README "Event contract" section.
 - Status at any time: `GET <base>/api/v1/status` (no key needed).
 
+## Dashboard and your own webhook
+
+Open the public base URL in a browser for the simulator console: live match, odds and player
+charts, the event feed, and an API guide. Any team can connect its own n8n workflow:
+
+1. Open the Webhooks tab and select Unlock. Enter the team key (shared privately by Emmanuel).
+2. Paste your n8n Webhook node's Production URL, optionally generate a shared token, and choose
+   which event types you want (all by default).
+3. Press Test on your destination. HTTP 200 means you are connected. You receive every event
+   from then on, including during a match that is already running.
+
+The team key can only manage webhooks. Starting, pausing and resetting matches needs the
+control key.
+
 ## Team A: n8n ingestion
 
 - One event per `POST`, `Content-Type: application/json`, to `N8N_WEBHOOK_URL`.

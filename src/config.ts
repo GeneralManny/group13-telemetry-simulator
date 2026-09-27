@@ -8,6 +8,11 @@ export interface AppConfig {
   webhookUrl: string | null;
   webhookToken: string | null;
   controlApiKey: string | null;
+  /** Grants webhook management only. Teams use it to register their own n8n URLs. */
+  teamAccessKey: string | null;
+  /** Directory for persistent state (the webhook list). Mount a volume here in production. */
+  dataDir: string | null;
+  maxWebhooks: number;
   defaultEventRate: number;
   defaultMatchDurationSeconds: number;
   deliveryTimeoutMs: number;
@@ -31,6 +36,9 @@ const EnvSchema = z.object({
   N8N_WEBHOOK_URL: opt(z.url({ protocol: /^https?$/ })),
   N8N_WEBHOOK_TOKEN: opt(z.string().min(1)),
   CONTROL_API_KEY: opt(z.string().min(1)),
+  TEAM_ACCESS_KEY: opt(z.string().min(1)),
+  DATA_DIR: opt(z.string().min(1)),
+  MAX_WEBHOOKS: opt(z.coerce.number().int().min(1).max(100)),
   DEFAULT_EVENT_RATE: opt(z.coerce.number().min(0.1).max(50)),
   DEFAULT_MATCH_DURATION_SECONDS: opt(z.coerce.number().int().min(10).max(7200)),
   DELIVERY_TIMEOUT_MS: opt(z.coerce.number().int().min(100).max(60_000)),
@@ -76,6 +84,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     webhookUrl: e.N8N_WEBHOOK_URL ?? null,
     webhookToken: e.N8N_WEBHOOK_TOKEN ?? null,
     controlApiKey: e.CONTROL_API_KEY ?? null,
+    teamAccessKey: e.TEAM_ACCESS_KEY ?? null,
+    dataDir: e.DATA_DIR ?? null,
+    maxWebhooks: e.MAX_WEBHOOKS ?? 20,
     defaultEventRate: e.DEFAULT_EVENT_RATE ?? 2,
     defaultMatchDurationSeconds: e.DEFAULT_MATCH_DURATION_SECONDS ?? 300,
     deliveryTimeoutMs: e.DELIVERY_TIMEOUT_MS ?? 5000,
@@ -109,8 +120,17 @@ export interface Readiness {
   warnings: string[];
 }
 
-/** Readiness reports variable names only, never values. */
-export function checkReadiness(config: AppConfig): Readiness {
+/**
+ * Readiness reports variable names only, never values. A production service is ready to
+ * emit when it has at least one destination: N8N_WEBHOOK_URL or a dashboard webhook.
+ */
+export function checkReadiness(
+  config: AppConfig,
+  state: { enabledWebhooks: number; webhookStorePersistent: boolean } = {
+    enabledWebhooks: 0,
+    webhookStorePersistent: false,
+  },
+): Readiness {
   const production = config.nodeEnv === "production";
   const missing: string[] = [];
   const warnings: string[] = [];
@@ -118,9 +138,12 @@ export function checkReadiness(config: AppConfig): Readiness {
   const webhookMissing = !config.webhookUrl || isPlaceholderUrl(config.webhookUrl);
   const keyMissing = !config.controlApiKey || PLACEHOLDER_VALUES.has(config.controlApiKey);
 
-  if (webhookMissing) {
+  if (webhookMissing && state.enabledWebhooks === 0) {
     if (production) missing.push("N8N_WEBHOOK_URL");
-    else warnings.push("N8N_WEBHOOK_URL is not set: runs default to dry-run (no delivery)");
+    else warnings.push("No webhook destination: add one in the dashboard or set N8N_WEBHOOK_URL");
+  }
+  if (production && !state.webhookStorePersistent) {
+    warnings.push("DATA_DIR is not set or not writable: dashboard webhooks are lost on restart");
   }
   if (keyMissing) {
     if (production) missing.push("CONTROL_API_KEY");
@@ -143,6 +166,13 @@ export function checkReadiness(config: AppConfig): Readiness {
 /** The default webhook URL, or null when it is missing or a placeholder. */
 export function usableWebhookUrl(config: AppConfig): string | null {
   return config.webhookUrl && !isPlaceholderUrl(config.webhookUrl) ? config.webhookUrl : null;
+}
+
+/** The team access key, or null when it is missing or a placeholder. */
+export function usableTeamKey(config: AppConfig): string | null {
+  return config.teamAccessKey && !PLACEHOLDER_VALUES.has(config.teamAccessKey)
+    ? config.teamAccessKey
+    : null;
 }
 
 /** The control API key, or null when it is missing or a placeholder. */

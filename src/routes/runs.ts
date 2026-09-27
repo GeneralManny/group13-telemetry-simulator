@@ -1,4 +1,4 @@
-import type { FastifyInstance, preHandlerHookHandler } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { AppConfig } from "../config.js";
 import {
   RequestValidationError,
@@ -7,6 +7,7 @@ import {
   resolveRunConfig,
 } from "../contracts/validation.js";
 import type { SimulatorEngine } from "../simulator/engine.js";
+import type { Auth } from "./auth.js";
 
 interface RunParams {
   runId: string;
@@ -14,10 +15,10 @@ interface RunParams {
 
 export function registerRunRoutes(
   app: FastifyInstance,
-  deps: { config: AppConfig; engine: SimulatorEngine; auth: preHandlerHookHandler },
+  deps: { config: AppConfig; engine: SimulatorEngine; auth: Auth },
 ): void {
   const { engine, config } = deps;
-  const guarded = { preHandler: deps.auth };
+  const guarded = { preHandler: deps.auth.admin };
   const defaults = {
     event_rate_per_second: config.defaultEventRate,
     duration_seconds: config.defaultMatchDurationSeconds,

@@ -7,18 +7,45 @@ normal, performance-anomaly, odds-integrity, combined, and pipeline-failure scen
 The simulator supplies test evidence only. It never labels a player as a cheater and never sends
 a verdict downstream.
 
-- Runtime: Node.js 20+, TypeScript, Fastify 5, Zod 4, Pino
-- One instance, one active run, state in memory
+- Runtime: Node.js 20.9+, TypeScript, Fastify 5, Zod 4, Pino
+- Dashboard: Next.js 16 static export, served by the same service at `/`
+- One instance, one active run. Match state in memory; dashboard webhooks saved to `DATA_DIR`
 - Deterministic: the same scenario, seed and configuration always produce the same match content
+
+## Dashboard
+
+Open the service URL in a browser. The console has four tabs:
+
+- Overview: current match, score and clock, delivery counters, live odds chart, player metrics
+  against their baseline range, and a players table. With the control key: preset buttons,
+  a custom run form, pause, resume, stop, replay, reset, and a test event.
+- Webhooks: teams add their own n8n Webhook URL (with an optional shared token and an event
+  type filter), press Test, and see delivery health per destination. Every enabled webhook
+  receives every event from the next event onwards, in addition to `N8N_WEBHOOK_URL`.
+- Live events: the event stream with type and player filters, and the exact JSON payload.
+- API guide: base URL, copyable curl commands and the endpoint list.
+
+Access keys are entered in the browser and kept in that tab only (sessionStorage):
+
+| Key               | Can do                                                  |
+| ----------------- | ------------------------------------------------------- |
+| `CONTROL_API_KEY` | Everything: run control, test events, webhooks          |
+| `TEAM_ACCESS_KEY` | Add, test, pause and remove webhooks. Cannot touch runs |
+| None              | View the dashboard, status, charts and live events      |
 
 ## Quick start (local)
 
 ```bash
-npm install
+npm install && npm run install:dashboard
 npm run mock-webhook          # terminal 1: fake n8n on http://localhost:4000
 cp .env.example .env          # then edit: NODE_ENV=development, N8N_WEBHOOK_URL=http://localhost:4000/webhook/telemetry
-npm run dev                   # terminal 2: simulator on http://localhost:3000
+npm run dev                   # terminal 2: simulator API on http://localhost:3000
+npm run dev:dashboard         # terminal 3: dashboard with hot reload on http://localhost:3001
 ```
+
+`npm run dev:dashboard` proxies `/api` to the simulator (set `SIMULATOR_URL` to point elsewhere).
+To see the production setup instead, run `npm run build:dashboard` once; the simulator then
+serves the built dashboard at http://localhost:3000.
 
 `npm run dev` does not load `.env` automatically. Either export the variables in your shell, or run
 `node --env-file=.env --import tsx src/server.ts`.
@@ -32,6 +59,8 @@ endpoints are open. Neither shortcut applies in production.
 | Command                       | Purpose                                                                    |
 | ----------------------------- | -------------------------------------------------------------------------- |
 | `npm run dev`                 | Run from source with reload and pretty logs                                |
+| `npm run dev:dashboard`       | Next.js dashboard with hot reload on port 3001                             |
+| `npm run build:dashboard`     | Static export to `dashboard/out/`, served at `/` by the simulator          |
 | `npm run build` / `npm start` | Production build to `dist/`, then run it                                   |
 | `npm test`                    | Unit, API, webhook and end-to-end tests (Vitest)                           |
 | `npm run check`               | Typecheck, lint, format check and tests                                    |
@@ -54,6 +83,9 @@ Base URL: the Railway public domain, for example `https://<service>.up.railway.a
 | GET    | `/api/v1/players`                | Teams, player profiles and baselines                                       |
 | GET    | `/api/v1/events/recent?limit=50` | Most recent emitted events, newest first                                   |
 | GET    | `/api/v1/events/stream`          | Server-Sent Events stream of emitted events (dashboard preview)            |
+| GET    | `/api/v1/timeline?player=<id>`   | Chart data: odds, one player's samples, latest snapshots                   |
+| GET    | `/api/v1/session`                | Which role the sent key has (`admin`, `team` or none)                      |
+| GET    | `/api`                           | JSON index of every endpoint                                               |
 
 ### Protected (header `X-API-Key: <CONTROL_API_KEY>` or `Authorization: Bearer <key>`)
 
@@ -69,6 +101,22 @@ Base URL: the Railway public domain, for example `https://<service>.up.railway.a
 | POST   | `/api/v1/test-event`         | Send one controlled event and return n8n's response                        |
 
 `:runId` can be `current` instead of the literal ID.
+
+### Webhooks (team key or control key)
+
+| Method | Path                        | Purpose                                                          |
+| ------ | --------------------------- | ---------------------------------------------------------------- |
+| GET    | `/api/v1/webhooks`          | Every destination with delivery stats. Tokens are never returned |
+| POST   | `/api/v1/webhooks`          | Add `{name, url, token?, event_types?, enabled?}` (201)          |
+| PATCH  | `/api/v1/webhooks/:id`      | Change any field, for example `{"enabled": false}`               |
+| DELETE | `/api/v1/webhooks/:id`      | Remove (204)                                                     |
+| POST   | `/api/v1/webhooks/:id/test` | One test event to that destination only (`default` = env URL)    |
+
+In production a webhook URL must be public `https`: private, loopback, link-local and
+`*.railway.internal` addresses are rejected. Each webhook gets its own token as
+`X-Simulator-Token`; the `N8N_WEBHOOK_TOKEN` is only sent to `N8N_WEBHOOK_URL`. At most
+`MAX_WEBHOOKS` (20). Delivery counters in `/api/v1/status` count each event once per
+destination, so with three webhooks `events_delivered` is three times `events_generated`.
 
 ### Starting a run
 
@@ -199,22 +247,25 @@ Webhook headers: `Content-Type: application/json`, `X-Simulator-Token` (when
 
 ## Configuration
 
-| Variable                         | Required in production | Default         | Notes                                                |
-| -------------------------------- | ---------------------- | --------------- | ---------------------------------------------------- |
-| `PORT`                           | no                     | 3000            | Railway sets this                                    |
-| `NODE_ENV`                       | yes                    | development     | Set to `production` on Railway                       |
-| `LOG_LEVEL`                      | no                     | info            | `debug` also logs health and status requests         |
-| `N8N_WEBHOOK_URL`                | yes                    |                 | Team A's production webhook URL                      |
-| `N8N_WEBHOOK_TOKEN`              | recommended            |                 | Sent as `X-Simulator-Token`                          |
-| `CONTROL_API_KEY`                | yes                    |                 | 16+ characters. Protects control endpoints           |
-| `DEFAULT_EVENT_RATE`             | no                     | 2               | Events per second                                    |
-| `DEFAULT_MATCH_DURATION_SECONDS` | no                     | 300             |                                                      |
-| `DELIVERY_TIMEOUT_MS`            | no                     | 5000            |                                                      |
-| `MAX_DELIVERY_ATTEMPTS`          | no                     | 4               | Including the first attempt                          |
-| `MAX_QUEUE_SIZE`                 | no                     | 1000            |                                                      |
-| `DELIVERY_CONCURRENCY`           | no                     | 4               |                                                      |
-| `RETRY_DELAYS_MS`                | no                     | 1000,3000,10000 |                                                      |
-| `ALLOWED_ORIGIN`                 | no                     |                 | Comma-separated dashboard origins for browser access |
+| Variable                         | Required in production | Default         | Notes                                                  |
+| -------------------------------- | ---------------------- | --------------- | ------------------------------------------------------ |
+| `PORT`                           | no                     | 3000            | Railway sets this                                      |
+| `NODE_ENV`                       | yes                    | development     | Set to `production` on Railway                         |
+| `LOG_LEVEL`                      | no                     | info            | `debug` also logs health and status requests           |
+| `N8N_WEBHOOK_URL`                | yes                    |                 | Team A's production webhook URL                        |
+| `N8N_WEBHOOK_TOKEN`              | recommended            |                 | Sent as `X-Simulator-Token`                            |
+| `CONTROL_API_KEY`                | yes                    |                 | 16+ characters. Protects control endpoints             |
+| `DEFAULT_EVENT_RATE`             | no                     | 2               | Events per second                                      |
+| `DEFAULT_MATCH_DURATION_SECONDS` | no                     | 300             |                                                        |
+| `DELIVERY_TIMEOUT_MS`            | no                     | 5000            |                                                        |
+| `MAX_DELIVERY_ATTEMPTS`          | no                     | 4               | Including the first attempt                            |
+| `MAX_QUEUE_SIZE`                 | no                     | 1000            |                                                        |
+| `DELIVERY_CONCURRENCY`           | no                     | 4               |                                                        |
+| `RETRY_DELAYS_MS`                | no                     | 1000,3000,10000 |                                                        |
+| `ALLOWED_ORIGIN`                 | no                     |                 | Comma-separated dashboard origins for browser access   |
+| `TEAM_ACCESS_KEY`                | no                     |                 | Webhook management only. Share with team leads         |
+| `DATA_DIR`                       | recommended            |                 | Where dashboard webhooks are saved. `/data` on Railway |
+| `MAX_WEBHOOKS`                   | no                     | 20              |                                                        |
 
 `/ready` returns 503 and lists variable names (never values) when required variables are missing,
 invalid, or still set to the `.env.example` placeholders. Logs redact API keys, tokens and
@@ -227,7 +278,10 @@ authorization headers, and status shows only the webhook host, never its path.
 2. Without Docker, use build `npm ci && npm run build` and start `npm run start`.
 3. Add the variables above in the service's Variables tab. Set `NODE_ENV=production`.
 4. Generate a public domain under Settings, Networking.
-5. Verify:
+5. Add a volume mounted at `/data` and set `DATA_DIR=/data`, so webhooks added in the dashboard
+   survive restarts and redeploys. The image runs as the `node` user, so also set
+   `RAILWAY_RUN_UID=0` (Railway volumes are owned by root).
+6. Verify:
    1. `GET /health` returns 200.
    2. `GET /ready` returns `"status": "ready"`.
    3. `GET /api/v1/status` shows `"status": "idle"`.
