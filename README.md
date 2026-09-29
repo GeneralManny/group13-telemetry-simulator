@@ -113,7 +113,9 @@ Base URL: the Railway public domain, for example `https://<service>.up.railway.a
 | POST   | `/api/v1/webhooks/:id/test` | One test event to that destination only (`default` = env URL)    |
 
 In production a webhook URL must be public `https`: private, loopback, link-local and
-`*.railway.internal` addresses are rejected. Each webhook gets its own token as
+`*.railway.internal` addresses are rejected. An n8n running on a laptop (`http://localhost:5678`)
+cannot be reached from Railway; expose it with n8n Cloud, a hosted n8n, or a tunnel such as
+`cloudflared tunnel --url http://localhost:5678`, and use the Production URL (`/webhook/...`). Each webhook gets its own token as
 `X-Simulator-Token`; the `N8N_WEBHOOK_TOKEN` is only sent to `N8N_WEBHOOK_URL`. At most
 `MAX_WEBHOOKS` (20). Delivery counters in `/api/v1/status` count each event once per
 destination, so with three webhooks `events_delivered` is three times `events_generated`.

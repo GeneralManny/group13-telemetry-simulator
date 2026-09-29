@@ -1791,3 +1791,10 @@ summary,
     color: var(--muted);
   }
 }
+
+.field-notice {
+  margin: 4px 0 0;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.45;
+}

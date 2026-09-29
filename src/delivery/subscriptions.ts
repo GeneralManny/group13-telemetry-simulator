@@ -44,6 +44,19 @@ export class SubscriptionError extends Error {
 const BLOCKED_HOST_SUFFIXES = [".internal", ".local", ".localhost", ".railway.internal"];
 
 /** Rejects addresses that would let the simulator be pointed at private infrastructure. */
+const LOCAL_ADDRESS =
+  "points to your own computer, which the simulator on Railway cannot reach. Give n8n a " +
+  "public https address (n8n Cloud, a hosted n8n, or a tunnel such as " +
+  "`cloudflared tunnel --url http://localhost:5678`) and paste that address instead";
+const PRIVATE_ADDRESS =
+  "is a private network address the simulator cannot reach. Use a public https address";
+const NEEDS_HTTPS =
+  "must use https. A tunnel such as Cloudflare Tunnel or ngrok gives n8n an https address";
+
+/**
+ * Rejects addresses the hosted simulator cannot or must not call. Local and private
+ * addresses are checked first so the message explains the real problem, not just https.
+ */
 export function checkDestinationUrl(raw: string, production: boolean): string | null {
   let url: URL;
   try {
@@ -52,30 +65,31 @@ export function checkDestinationUrl(raw: string, production: boolean): string | 
     return "must be a valid URL";
   }
   if (url.protocol !== "https:" && url.protocol !== "http:") return "must use http or https";
-  if (production && url.protocol !== "https:") return "must use https";
   if (url.username || url.password) return "must not contain a username or password";
   if (!production) return null;
 
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (host === "localhost" || BLOCKED_HOST_SUFFIXES.some((s) => host.endsWith(s))) {
-    return "must be a public address";
+  if (host === "localhost" || host === "0.0.0.0" || host.endsWith(".localhost")) {
+    return LOCAL_ADDRESS;
   }
+  if (BLOCKED_HOST_SUFFIXES.some((s) => host.endsWith(s))) return PRIVATE_ADDRESS;
   const ipVersion = isIP(host);
   if (ipVersion === 4) {
     const [a, b] = host.split(".").map(Number) as [number, number];
+    if (a === 127 || a === 0) return LOCAL_ADDRESS;
     const privateV4 =
       a === 10 ||
-      a === 127 ||
-      a === 0 ||
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
       (a === 192 && b === 168) ||
       (a === 100 && b >= 64 && b <= 127);
-    if (privateV4) return "must be a public address";
+    if (privateV4) return PRIVATE_ADDRESS;
   }
-  if (ipVersion === 6 && (host === "::1" || /^(fc|fd|fe8|fe9|fea|feb)/.test(host))) {
-    return "must be a public address";
+  if (ipVersion === 6) {
+    if (host === "::1") return LOCAL_ADDRESS;
+    if (/^(fc|fd|fe8|fe9|fea|feb)/.test(host)) return PRIVATE_ADDRESS;
   }
+  if (url.protocol !== "https:") return NEEDS_HTTPS;
   return null;
 }
 

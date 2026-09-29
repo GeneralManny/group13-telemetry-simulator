@@ -99,17 +99,25 @@ describe("destination URL rules", () => {
   it.each([
     ["https://team.app.n8n.cloud/webhook/x", null],
     ["http://team.example.org/hook", "must use https"],
-    ["https://localhost/hook", "must be a public address"],
-    ["https://10.0.0.5/hook", "must be a public address"],
-    ["https://192.168.1.2/hook", "must be a public address"],
-    ["https://169.254.169.254/latest", "must be a public address"],
-    ["https://postgres.railway.internal/hook", "must be a public address"],
-    ["https://[::1]/hook", "must be a public address"],
+    ["http://localhost:5678/webhook/7a755220", "points to your own computer"],
+    ["https://localhost/hook", "points to your own computer"],
+    ["http://127.0.0.1:5678/webhook/x", "points to your own computer"],
+    ["https://[::1]/hook", "points to your own computer"],
+    ["https://10.0.0.5/hook", "private network address"],
+    ["https://192.168.1.2/hook", "private network address"],
+    ["https://169.254.169.254/latest", "private network address"],
+    ["https://postgres.railway.internal/hook", "private network address"],
     ["https://user:pass@team.example.org/hook", "must not contain a username or password"],
     ["ftp://team.example.org/hook", "must use http or https"],
     ["not a url", "must be a valid URL"],
   ])("production: %s -> %s", (url, expected) => {
-    expect(checkDestinationUrl(url, true)).toBe(expected);
+    const problem = checkDestinationUrl(url, true);
+    if (expected === null) expect(problem).toBeNull();
+    else expect(problem).toContain(expected);
+  });
+
+  it("explains how to fix a local n8n address", () => {
+    expect(checkDestinationUrl("http://localhost:5678/webhook/x", true)).toContain("tunnel");
   });
 
   it("allows local http addresses in development", () => {

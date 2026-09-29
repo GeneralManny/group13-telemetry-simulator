@@ -160,6 +160,45 @@ function WebhooksSkeleton() {
   );
 }
 
+/**
+ * Advice while typing, for the mistakes people make most often with n8n URLs. The server
+ * makes the final decision; this only explains problems before the form is sent.
+ */
+function urlAdvice(raw: string): string | null {
+  let u: URL;
+  try {
+    u = new URL(raw.trim());
+  } catch {
+    return null;
+  }
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const local =
+    host === "localhost" ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    host.startsWith("127.") ||
+    host.endsWith(".local");
+  const onDeployedSite = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+  if (local && onDeployedSite) {
+    return (
+      "This address only exists on your own computer, so the simulator cannot reach it. " +
+      "Give n8n a public address: use n8n Cloud, a hosted n8n, or run " +
+      '"cloudflared tunnel --url http://localhost:5678" and paste the https address it prints, ' +
+      "keeping the /webhook/... part."
+    );
+  }
+  if (u.pathname.includes("/webhook-test/")) {
+    return (
+      "This is n8n's Test URL, which only works while the editor is listening. " +
+      "Activate the workflow and use the Production URL (/webhook/...) instead."
+    );
+  }
+  if (u.protocol === "http:" && onDeployedSite) {
+    return "Use an https address. A tunnel such as Cloudflare Tunnel or ngrok provides one.";
+  }
+  return null;
+}
+
 function AddWebhook({
   accessKey,
   eventTypes,
@@ -234,6 +273,12 @@ function AddWebhook({
           <span className="field-hint">
             In n8n, open the Webhook node and copy the Production URL.
           </span>
+          {urlAdvice(url) && (
+            <span className="notice field-notice" data-tone="warning" role="status">
+              <Icon name="warning" />
+              <span>{urlAdvice(url)}</span>
+            </span>
+          )}
         </label>
         <label className="field">
           <span>Shared token (optional)</span>
