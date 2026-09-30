@@ -1,0 +1,302 @@
+{
+  "id": "g13Evidence00002",
+  "name": "G13 2 - Evidence, AI summary and Slack alert",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "7a100000-0010-4000-8000-000000000000",
+      "name": "When called by ingestion",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/cases/{{ $('When called by ingestion').item.json.case_id }}/summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "a1100000-0011-4000-8000-000000000000",
+      "name": "Generate evidence summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 300],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "notes": "The monitor asks Claude for a grounded summary and falls back to a fixed template if the AI is unavailable, slow, or uses accusing words."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/cases/{{ $('When called by ingestion').item.json.case_id }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0012-4000-8000-000000000000",
+      "name": "Load case and evidence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds the Slack alert from stored evidence only. It names measurements and asks for a\n// human decision; it never says a player cheated or a match was fixed.\nconst detail = $json;\nconst c = detail.case;\nconst ev = detail.evidence;\nconst alert = $(\"When called by ingestion\").first().json;\n\nconst team = (id) => (id === \"team_blue\" ? \"Team Blue\" : \"Team Red\");\nconst subject = ev.subject.type === \"player\"\n  ? ev.subject.display_name + \" (\" + ev.subject.player_id + \", \" + team(ev.subject.team_id) + \")\"\n  : \"Match-winner betting market\";\nconst clock = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + \":\" + String(s % 60).padStart(2, \"0\"); };\nconst reasons = ev.rules.filter((r) => r.points > 0).map((r) => \"- \" + r.description).join(\"\\n\");\nconst summary = (c.ai_summary || \"\").slice(0, 2800);\nconst title = alert.reason === \"severity_increase\"\n  ? \"Case \" + c.case_id + \" rose to \" + c.severity.toUpperCase()\n  : \"New \" + c.severity.toUpperCase() + \" integrity case \" + c.case_id;\n\nconst blocks = [\n  { type: \"header\", text: { type: \"plain_text\", text: title } },\n  { type: \"section\", fields: [\n    { type: \"mrkdwn\", text: \"*Severity*\\n\" + c.severity.toUpperCase() + \" (\" + c.peak_score + \"/100)\" },\n    { type: \"mrkdwn\", text: \"*Subject*\\n\" + subject },\n    { type: \"mrkdwn\", text: \"*Match*\\n\" + ev.match.match_id },\n    { type: \"mrkdwn\", text: \"*Window*\\n\" + clock(ev.window.start) + \" to \" + clock(ev.window.end) + \" match time\" },\n  ] },\n  { type: \"section\", text: { type: \"mrkdwn\", text: \"*Why this was flagged*\\n\" + reasons } },\n  { type: \"section\", text: { type: \"mrkdwn\", text: \"*Evidence summary* (\" + (c.ai_status === \"generated\" ? \"AI, from stored evidence\" : \"template\") + \")\\n\" + summary } },\n  { type: \"context\", elements: [{ type: \"mrkdwn\", text: \"Signals for human review only. No conclusion has been made. Case \" + c.case_id + \", trace \" + (alert.trace_id || \"n/a\") + \".\" }] },\n];\n\nconst actions = [];\nif (ev.case_url) actions.push({ type: \"button\", text: { type: \"plain_text\", text: \"Open case\" }, url: ev.case_url, action_id: \"open_case\" });\nif ($env.SLACK_INTERACTIVE === \"true\") {\n  actions.push(\n    { type: \"button\", text: { type: \"plain_text\", text: \"Approve for investigation\" }, style: \"primary\", action_id: \"approve_for_investigation\", value: c.case_id },\n    { type: \"button\", text: { type: \"plain_text\", text: \"Escalate\" }, action_id: \"escalate\", value: c.case_id },\n    { type: \"button\", text: { type: \"plain_text\", text: \"Dismiss\" }, style: \"danger\", action_id: \"dismiss\", value: c.case_id },\n  );\n}\nif (actions.length) blocks.push({ type: \"actions\", elements: actions });\n\nreturn [{ json: { case_id: c.case_id, slack_configured: Boolean($env.SLACK_WEBHOOK_URL), slack: { text: title, blocks } } }];"
+      },
+      "id": "c0de0000-0013-4000-8000-000000000000",
+      "name": "Build Slack message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond0000-0014-4000-8000-000000000000",
+              "leftValue": "={{ $json.slack_configured }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1f000000-0015-4000-8000-000000000000",
+      "name": "Slack configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.slack) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0016-4000-8000-000000000000",
+      "name": "Send Slack alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/cases/{{ $('Build Slack message').item.json.case_id }}/alert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'sent' }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0017-4000-8000-000000000000",
+      "name": "Record alert sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/cases/{{ $('Build Slack message').item.json.case_id }}/alert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'failed', error: String($json.error?.message ?? 'slack_error').slice(0, 900) }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0018-4000-8000-000000000000",
+      "name": "Record alert failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/cases/{{ $('Build Slack message').item.json.case_id }}/alert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ status: 'failed', error: 'slack_not_configured' }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0019-4000-8000-000000000000",
+      "name": "Record Slack not configured",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 420],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "When called by ingestion": {
+      "main": [
+        [
+          {
+            "node": "Generate evidence summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate evidence summary": {
+      "main": [
+        [
+          {
+            "node": "Load case and evidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load case and evidence": {
+      "main": [
+        [
+          {
+            "node": "Build Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack message": {
+      "main": [
+        [
+          {
+            "node": "Slack configured?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack configured?": {
+      "main": [
+        [
+          {
+            "node": "Send Slack alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record Slack not configured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack alert": {
+      "main": [
+        [
+          {
+            "node": "Record alert sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Record alert failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

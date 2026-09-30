@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, api, loadKey, saveKey } from "@/lib/api";
 import type { Player, ScenarioCatalog, Session, Status } from "@/lib/types";
 import { ApiGuide } from "./ApiGuide";
+import { Cases } from "./Cases";
+import { Risk } from "./Risk";
 import { KeyDialog } from "./KeyDialog";
 import { LiveEvents } from "./LiveEvents";
 import { Overview } from "./Overview";
@@ -12,6 +14,8 @@ import { Webhooks } from "./Webhooks";
 
 const TABS = [
   { id: "overview", label: "Overview" },
+  { id: "cases", label: "Cases" },
+  { id: "risk", label: "Risk" },
   { id: "webhooks", label: "Webhooks" },
   { id: "events", label: "Live events" },
   { id: "guide", label: "API guide" },
@@ -221,6 +225,15 @@ export function Console() {
             onUnlock={() => setKeyOpen(true)}
           />
         )}
+        {tab === "cases" && (
+          <Cases
+            session={session}
+            accessKey={accessKey}
+            notify={notify}
+            onUnlock={() => setKeyOpen(true)}
+          />
+        )}
+        {tab === "risk" && <Risk session={session} accessKey={accessKey} notify={notify} />}
         {tab === "webhooks" && (
           <Webhooks
             session={session}

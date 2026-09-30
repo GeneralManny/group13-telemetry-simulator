@@ -1,0 +1,151 @@
+{
+  "id": "g13SlackReview03",
+  "name": "G13 3 - Slack review buttons",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "slack-actions",
+        "responseMode": "onReceived",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "3eb00000-0020-4000-8000-000000000000",
+      "name": "Receive Slack button click",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 300],
+      "webhookId": "6e1e1e1e-0000-4000-8000-000000000003",
+      "notes": "Set this Production URL as the Interactivity Request URL of the Slack app."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Accepts only genuine Slack requests: the signature must match SLACK_SIGNING_SECRET and the\n// request must be less than five minutes old (stops replays).\nconst crypto = require(\"crypto\");\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst secret = $env.SLACK_SIGNING_SECRET;\nif (!secret) throw new Error(\"SLACK_SIGNING_SECRET is not set\");\n\n// URLSearchParams is not available inside n8n's Code node sandbox, so the form body is parsed by hand.\nconst formValue = (body, key) => {\n  for (const pair of body.split(\"&\")) {\n    const [k, v = \"\"] = pair.split(\"=\");\n    if (decodeURIComponent(k.replace(/\\+/g, \" \")) === key) return decodeURIComponent(v.replace(/\\+/g, \" \"));\n  }\n  return null;\n};\nif (!item.binary || !item.binary.data) throw new Error(\"raw request body missing; enable Raw Body on the webhook\");\nconst raw = (await this.helpers.getBinaryDataBuffer(0, \"data\")).toString(\"utf8\");\nconst ts = Number(headers[\"x-slack-request-timestamp\"]);\nif (!ts || Math.abs(Date.now() / 1000 - ts) > 300) throw new Error(\"stale or missing Slack timestamp\");\nconst expected = \"v0=\" + crypto.createHmac(\"sha256\", secret).update(\"v0:\" + ts + \":\" + raw).digest(\"hex\");\nconst given = String(headers[\"x-slack-signature\"] || \"\");\nif (given.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(expected))) {\n  throw new Error(\"Slack signature does not match\");\n}\n\nconst payload = JSON.parse(formValue(raw, \"payload\") || \"{}\");\nconst action = (payload.actions || [])[0] || {};\nconst allowed = [\"approve_for_investigation\", \"dismiss\", \"escalate\"];\nif (!allowed.includes(action.action_id)) return [];\nreturn [{\n  json: {\n    case_id: action.value,\n    action: action.action_id,\n    reviewer: (payload.user && (payload.user.name || payload.user.username || payload.user.id)) || \"slack-user\",\n    response_url: payload.response_url,\n  },\n}];"
+      },
+      "id": "c0de0000-0021-4000-8000-000000000000",
+      "name": "Verify Slack request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/cases/{{ $json.case_id }}/review",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ action: $json.action, reviewer: $json.reviewer, notes: 'Decided in Slack', channel: 'slack' }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a1100000-0022-4000-8000-000000000000",
+      "name": "Record review in monitor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nconst req = $(\"Verify Slack request\").item.json;\nconst label = { approve_for_investigation: \"approved for investigation\", dismiss: \"dismissed\", escalate: \"escalated\" }[req.action];\nconst text = r.error\n  ? \"Could not record the decision for \" + req.case_id + \": \" + (r.message || r.error)\n  : r.duplicate\n    ? req.case_id + \" was already \" + r.status + \"; nothing changed.\"\n    : req.reviewer + \" \" + label + \" \" + req.case_id + \".\";\nreturn [{ json: { response_url: req.response_url, body: { response_type: \"in_channel\", replace_original: false, text } } }];"
+      },
+      "id": "c0de0000-0023-4000-8000-000000000000",
+      "name": "Build Slack reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.response_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0024-4000-8000-000000000000",
+      "name": "Reply in Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 300],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Receive Slack button click": {
+      "main": [
+        [
+          {
+            "node": "Verify Slack request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Slack request": {
+      "main": [
+        [
+          {
+            "node": "Record review in monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record review in monitor": {
+      "main": [
+        [
+          {
+            "node": "Build Slack reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack reply": {
+      "main": [
+        [
+          {
+            "node": "Reply in Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

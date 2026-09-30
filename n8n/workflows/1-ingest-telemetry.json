@@ -1,0 +1,260 @@
+{
+  "id": "g13Ingestion0001",
+  "name": "G13 1 - Ingest telemetry",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telemetry",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "3eb00000-0001-4000-8000-000000000000",
+      "name": "Receive simulator event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [0, 300],
+      "webhookId": "6e1e1e1e-0000-4000-8000-000000000001",
+      "notes": "Production URL /webhook/telemetry. Answers 200 immediately so the simulator is never slowed down."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Checks every event from the simulator before anything is stored.\n// Invalid events are not dropped: they go to the dead-letter store with the reason.\nconst REQUIRED = [\"event_id\", \"event_type\", \"schema_version\", \"timestamp\", \"match_id\", \"sequence_number\", \"simulator_run_id\"];\nconst expectedToken = $env.SIMULATOR_WEBHOOK_TOKEN;\nconst traceId = \"n8n-\" + $execution.id;\n\nreturn $input.all().map((item) => {\n  const headers = item.json.headers || {};\n  const event = item.json.body;\n  const errors = [];\n\n  if (expectedToken && headers[\"x-simulator-token\"] !== expectedToken) {\n    errors.push(\"missing or wrong X-Simulator-Token header\");\n  }\n  if (!event || typeof event !== \"object\" || Array.isArray(event)) {\n    errors.push(\"body is not a JSON object\");\n  } else {\n    for (const field of REQUIRED) {\n      if (event[field] === undefined || event[field] === null || event[field] === \"\") errors.push(field + \" is required\");\n    }\n    if (event.timestamp && Number.isNaN(Date.parse(event.timestamp))) errors.push(\"timestamp is not a valid date\");\n    if (event.sequence_number !== undefined && !Number.isInteger(event.sequence_number)) errors.push(\"sequence_number must be a whole number\");\n    if (event.metrics !== undefined && (typeof event.metrics !== \"object\" || event.metrics === null || Array.isArray(event.metrics))) errors.push(\"metrics must be an object\");\n    if (event.schema_version && event.schema_version !== \"1.0\") errors.push(\"unsupported schema_version \" + event.schema_version);\n  }\n\n  // Normalise: consistent casing for the event type, nothing else is changed.\n  const normalized = errors.length ? event : { ...event, event_type: String(event.event_type).toLowerCase() };\n\n  return {\n    json: {\n      valid: errors.length === 0,\n      errors,\n      event: normalized,\n      event_id: event && typeof event === \"object\" ? event.event_id ?? null : null,\n      trace_id: traceId,\n    },\n  };\n});"
+      },
+      "id": "c0de0000-0002-4000-8000-000000000000",
+      "name": "Validate and normalise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond0000-0003-4000-8000-000000000000",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1f000000-0004-4000-8000-000000000000",
+      "name": "Valid event?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ event: $json.event, trace_id: $json.trace_id }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0005-4000-8000-000000000000",
+      "name": "Store and score in monitor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput",
+      "notes": "Duplicates are stored once by the monitor (event_id is the primary key). Retries up to 3 times."
+    },
+    {
+      "parameters": {
+        "jsCode": "// The monitor answers with zero, one or two alert instructions (a new case, or a case that\n// became more severe). Each one starts the evidence and Slack workflow. No alert, no output.\nconst out = [];\nfor (const item of $input.all()) {\n  for (const alert of item.json.alerts || []) {\n    out.push({ json: { ...alert, trace_id: item.json.trace_id } });\n  }\n}\nreturn out;"
+      },
+      "id": "c0de0000-0006-4000-8000-000000000000",
+      "name": "One item per alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 120]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "g13Evidence00002",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "e7ec0000-0007-4000-8000-000000000000",
+      "name": "Start evidence and alert",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [1200, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/dead-letters",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reason: 'monitor_rejected', error: String($json.error?.message ?? $json.error ?? 'unknown'), payload: $('Validate and normalise').item.json.event, event_id: $('Validate and normalise').item.json.event_id, trace_id: $('Validate and normalise').item.json.trace_id }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0008-4000-8000-000000000000",
+      "name": "Dead letter: rejected by monitor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 320],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MONITOR_API_URL }}/api/v1/monitor/dead-letters",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.MONITOR_INGEST_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ reason: 'validation_failed', error: $json.errors.join('; '), payload: $json.event ?? null, event_id: $json.event_id, trace_id: $json.trace_id }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1100000-0009-4000-8000-000000000000",
+      "name": "Dead letter: invalid event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 440],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Receive simulator event": {
+      "main": [
+        [
+          {
+            "node": "Validate and normalise",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and normalise": {
+      "main": [
+        [
+          {
+            "node": "Valid event?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid event?": {
+      "main": [
+        [
+          {
+            "node": "Store and score in monitor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dead letter: invalid event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store and score in monitor": {
+      "main": [
+        [
+          {
+            "node": "One item per alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dead letter: rejected by monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per alert": {
+      "main": [
+        [
+          {
+            "node": "Start evidence and alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

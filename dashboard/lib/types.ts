@@ -57,6 +57,7 @@ export interface Session {
   open: boolean;
   can_control_runs: boolean;
   can_manage_webhooks: boolean;
+  can_review_cases?: boolean;
 }
 
 export interface MetricBaseline {
@@ -171,4 +172,178 @@ export interface SendResult {
   status: number | null;
   error: string | null;
   durationMs: number;
+}
+
+// ---------------------------------------------------------------------------
+// Monitor (integrity cases)
+
+export type Severity = "normal" | "monitor" | "high" | "critical";
+export type CaseStatus = "open" | "pending_review" | "approved" | "dismissed" | "escalated";
+export type ReviewAction = "approve_for_investigation" | "dismiss" | "escalate";
+
+export interface RuleHit {
+  rule_id: string;
+  component: "performance" | "odds" | "cluster";
+  points: number;
+  description: string;
+  metric?: string;
+  observed?: number;
+  baseline_mean?: number;
+  baseline_stddev?: number;
+  deviation_sd?: number;
+  direction?: "above" | "below";
+  sample_count?: number;
+  movement_pct?: number;
+  seconds_apart?: number;
+  source_event_ids: string[];
+}
+
+export interface CaseSummary {
+  case_id: string;
+  match_id: string;
+  subject_type: "player" | "market";
+  player_id: string | null;
+  display_name: string | null;
+  team_id: TeamId | null;
+  status: CaseStatus;
+  severity: Severity;
+  score: number;
+  peak_score: number;
+  alert_status: string;
+  ai_status: string;
+  reviewer: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  window_start: number | null;
+  window_end: number | null;
+  rule_ids: string[] | null;
+}
+
+export interface EvidencePacket {
+  case_id: string;
+  severity: Severity;
+  score: number;
+  status: CaseStatus;
+  match: {
+    match_id: string;
+    simulator_run_id: string | null;
+    match_clock_seconds: number;
+    score: Score;
+  };
+  subject:
+    | { type: "player"; player_id: string; display_name: string; team_id: TeamId }
+    | { type: "market" };
+  components: { performance: number; odds: number; cluster: number };
+  rules: RuleHit[];
+  window: { start: number | null; end: number | null };
+  metrics_vs_baseline: {
+    metric: string;
+    baseline_mean: number;
+    baseline_stddev: number;
+    baseline_sample_size: number;
+    window_average: number | null;
+    deviation_sd: number | null;
+  }[];
+  odds_moves: {
+    event_id: string;
+    match_clock: number;
+    movement_pct: number;
+    shortened_team: TeamId | null;
+    from: { team_blue: number; team_red: number } | null;
+    to: { team_blue: number; team_red: number } | null;
+  }[];
+  sample_events: {
+    event_id: string;
+    match_clock: number;
+    event_type: string;
+    metrics: Record<string, number>;
+  }[];
+  evidence_event_count: number;
+  case_url: string | null;
+}
+
+export interface CaseDetail {
+  case: {
+    case_id: string;
+    status: CaseStatus;
+    severity: Severity;
+    score: number;
+    peak_score: number;
+    alert_status: string;
+    alert_attempts: number;
+    alert_error: string | null;
+    alerted_at: string | null;
+    ai_status: string;
+    ai_summary: string | null;
+    ai_model: string | null;
+    ai_generated_at: string | null;
+    reviewer: string | null;
+    review_notes: string | null;
+    reviewed_at: string | null;
+    created_at: string;
+    updated_at: string;
+    trace_id: string | null;
+  };
+  evidence: EvidencePacket;
+  score_history: { score: number; severity: Severity; t: number; calculated_at: string }[];
+  reviews: {
+    action: ReviewAction;
+    reviewer: string;
+    notes: string | null;
+    channel: string;
+    created_at: string;
+  }[];
+  audit: {
+    from_status: string | null;
+    to_status: string;
+    actor: string;
+    note: string | null;
+    at: string;
+  }[];
+}
+
+export interface MonitorOverview {
+  pipeline: {
+    status: "waiting" | "receiving" | "idle";
+    events_stored: number;
+    events_last_minute: number;
+    dead_letters: number;
+    last_event_at: string | null;
+    ai_configured: boolean;
+  };
+  match: {
+    match_id: string;
+    status: string;
+    score_blue: number;
+    score_red: number;
+    round_number: number | null;
+    total_rounds: number | null;
+    match_clock_seconds: number;
+    events_stored: number;
+    last_event_at: string;
+  } | null;
+  cases: Partial<Record<CaseStatus, number>>;
+  thresholds: { monitor: number; high: number; critical: number };
+}
+
+export interface SubjectRisk {
+  subject: string;
+  display_name: string;
+  team_id: TeamId | null;
+  score: number;
+  severity: Severity;
+  status: string;
+  peak_score: number;
+  rules: string[];
+  updated_at: string | null;
+}
+
+export interface DeadLetter {
+  id: string;
+  received_at: string;
+  event_id: string | null;
+  reason: string;
+  error: string | null;
+  trace_id: string | null;
 }

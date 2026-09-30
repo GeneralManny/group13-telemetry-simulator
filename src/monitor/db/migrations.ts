@@ -194,4 +194,26 @@ CREATE TABLE IF NOT EXISTS monitor.settings (
 );
 `,
   },
+  {
+    id: "002_status_checks",
+    sql: `
+DO $$ BEGIN
+  ALTER TABLE monitor.cases ADD CONSTRAINT cases_status_check
+    CHECK (status IN ('open', 'pending_review', 'approved', 'dismissed', 'escalated'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE monitor.cases ADD CONSTRAINT cases_severity_check
+    CHECK (severity IN ('normal', 'monitor', 'high', 'critical'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE monitor.reviews ADD CONSTRAINT reviews_action_check
+    CHECK (action IN ('approve_for_investigation', 'dismiss', 'escalate'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE INDEX IF NOT EXISTS cases_match_player ON monitor.cases (match_id, player_id);
+CREATE INDEX IF NOT EXISTS cases_severity ON monitor.cases (severity, updated_at DESC);
+`,
+  },
 ];
