@@ -16,6 +16,9 @@ import { registerHealthRoutes } from "./routes/health.js";
 import { registerRunRoutes } from "./routes/runs.js";
 import { registerStatusRoutes } from "./routes/status.js";
 import { registerWebhookRoutes } from "./routes/webhooks.js";
+import { createPool } from "./monitor/db/database.js";
+import { registerMonitorRoutes } from "./monitor/routes.js";
+import { MonitorError, MonitorService } from "./monitor/service.js";
 import { EngineError, SimulatorEngine } from "./simulator/engine.js";
 
 export interface AppDeps {
@@ -31,6 +34,7 @@ export interface BuiltApp {
   engine: SimulatorEngine;
   delivery: DeliveryQueue;
   subscriptions: SubscriptionStore;
+  monitor: MonitorService | null;
 }
 
 /** Headers that must never reach the logs. */
@@ -125,6 +129,29 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
     tickIntervalMs: deps.tickIntervalMs,
   });
 
+  // The monitor connects in the background with retries, so /health answers immediately and a
+  // slow or restarting database never blocks the simulator.
+  const monitor = config.databaseUrl
+    ? new MonitorService(createPool(config.databaseUrl), logger.child({ component: "monitor" }), {
+        anthropicApiKey: config.anthropicApiKey,
+        publicBaseUrl: config.publicBaseUrl,
+      })
+    : null;
+  let monitorTimer: NodeJS.Timeout | null = null;
+  const startMonitor = async (attempt = 1): Promise<void> => {
+    if (!monitor) return;
+    try {
+      await monitor.init();
+      logger.info({ attempt }, "monitor ready");
+    } catch (err) {
+      const wait = Math.min(30_000, 2000 * attempt);
+      logger.error({ err, attempt, retry_in_ms: wait }, "monitor database not ready, retrying");
+      monitorTimer = setTimeout(() => void startMonitor(attempt + 1), wait);
+      monitorTimer.unref();
+    }
+  };
+  void startMonitor();
+
   const app = Fastify({
     loggerInstance: logger as FastifyBaseLogger,
     // Fastify's own per-request lines are replaced by the quieter onResponse hook below.
@@ -174,6 +201,9 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   });
 
   app.setErrorHandler((error, req, reply) => {
+    if (error instanceof MonitorError) {
+      return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+    }
     if (error instanceof SubscriptionError) {
       return reply.code(error.statusCode).send({ error: error.code, message: error.message });
     }
@@ -199,11 +229,17 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   );
 
   const auth = createAuth(config);
-  registerHealthRoutes(app, { config, engine, subscriptions });
+  registerHealthRoutes(app, { config, engine, subscriptions, monitor });
   registerStatusRoutes(app, { engine });
   registerRunRoutes(app, { config, engine, auth });
   registerEventRoutes(app, { config, engine });
   registerWebhookRoutes(app, { engine, subscriptions, auth });
+  registerMonitorRoutes(app, { monitor, auth });
+
+  app.addHook("onClose", async () => {
+    if (monitorTimer) clearTimeout(monitorTimer);
+    await monitor?.pool.end().catch(() => undefined);
+  });
 
   // Dashboard. Files are registered individually (no wildcard) so unknown paths still 404 as JSON.
   if (dashboardBuilt) {
@@ -224,5 +260,5 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
     app.get("/", async (_req, reply) => reply.type("text/html").send(FALLBACK_PAGE));
   }
 
-  return { app, engine, delivery, subscriptions };
+  return { app, engine, delivery, subscriptions, monitor };
 }

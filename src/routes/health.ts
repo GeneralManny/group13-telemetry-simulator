@@ -4,10 +4,16 @@ import { SCHEMA_VERSION } from "../contracts/events.js";
 import { SERVICE_NAME, SIMULATOR_VERSION } from "../simulator/ids.js";
 import type { SubscriptionStore } from "../delivery/subscriptions.js";
 import type { SimulatorEngine } from "../simulator/engine.js";
+import type { MonitorService } from "../monitor/service.js";
 
 export function registerHealthRoutes(
   app: FastifyInstance,
-  deps: { config: AppConfig; engine: SimulatorEngine; subscriptions: SubscriptionStore },
+  deps: {
+    config: AppConfig;
+    engine: SimulatorEngine;
+    subscriptions: SubscriptionStore;
+    monitor: MonitorService | null;
+  },
 ): void {
   const startedAt = Date.now();
 
@@ -28,6 +34,8 @@ export function registerHealthRoutes(
       status: r.ready ? "ready" : "not_ready",
       environment: deps.config.nodeEnv,
       engine_state: deps.engine.state,
+      monitor: deps.monitor ? (deps.monitor.isReady ? "ready" : "connecting") : "not_configured",
+      ai_summaries: deps.config.anthropicApiKey ? "configured" : "fallback_template_only",
       missing_variables: r.missing,
       invalid_variables: r.invalid,
       warnings: r.warnings,

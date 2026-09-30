@@ -37,6 +37,7 @@ export function registerWebhookRoutes(
       open: deps.auth.open,
       can_control_runs: role === "admin",
       can_manage_webhooks: role === "admin" || role === "team",
+      can_review_cases: role === "admin",
     };
   });
 

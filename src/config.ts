@@ -13,6 +13,13 @@ export interface AppConfig {
   /** Directory for persistent state (the webhook list). Mount a volume here in production. */
   dataDir: string | null;
   maxWebhooks: number;
+  /** Postgres for the monitor. Without it the monitor endpoints answer 503. */
+  databaseUrl: string | null;
+  /** Key n8n uses to write to the monitor (events, summaries, alerts, Slack reviews). */
+  monitorIngestKey: string | null;
+  anthropicApiKey: string | null;
+  /** Public https address of this service, used for case links in alerts. */
+  publicBaseUrl: string | null;
   defaultEventRate: number;
   defaultMatchDurationSeconds: number;
   deliveryTimeoutMs: number;
@@ -39,6 +46,10 @@ const EnvSchema = z.object({
   TEAM_ACCESS_KEY: opt(z.string().min(1)),
   DATA_DIR: opt(z.string().min(1)),
   MAX_WEBHOOKS: opt(z.coerce.number().int().min(1).max(100)),
+  DATABASE_URL: opt(z.string().regex(/^postgres(ql)?:\/\//)),
+  MONITOR_INGEST_KEY: opt(z.string().min(16)),
+  ANTHROPIC_API_KEY: opt(z.string().min(1)),
+  PUBLIC_BASE_URL: opt(z.url({ protocol: /^https?$/ })),
   DEFAULT_EVENT_RATE: opt(z.coerce.number().min(0.1).max(50)),
   DEFAULT_MATCH_DURATION_SECONDS: opt(z.coerce.number().int().min(10).max(7200)),
   DELIVERY_TIMEOUT_MS: opt(z.coerce.number().int().min(100).max(60_000)),
@@ -87,6 +98,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     teamAccessKey: e.TEAM_ACCESS_KEY ?? null,
     dataDir: e.DATA_DIR ?? null,
     maxWebhooks: e.MAX_WEBHOOKS ?? 20,
+    databaseUrl: e.DATABASE_URL ?? null,
+    monitorIngestKey: e.MONITOR_INGEST_KEY ?? null,
+    anthropicApiKey: e.ANTHROPIC_API_KEY ?? null,
+    publicBaseUrl: e.PUBLIC_BASE_URL ? e.PUBLIC_BASE_URL.replace(/\/$/, "") : null,
     defaultEventRate: e.DEFAULT_EVENT_RATE ?? 2,
     defaultMatchDurationSeconds: e.DEFAULT_MATCH_DURATION_SECONDS ?? 300,
     deliveryTimeoutMs: e.DELIVERY_TIMEOUT_MS ?? 5000,
