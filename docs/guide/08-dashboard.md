@@ -53,7 +53,7 @@ Point at: the score breakdown 55 / 30 / 10, the reaction time row "228.5 ± 21.5
 
 ### Risk
 
-- Pipeline health: Pipeline (Receiving, Idle or Waiting for events), Events stored ("Each event_id once"), Last minute, Dead letters ("Rejected, logged, pipeline kept going"), Open cases (open, pending review and escalated together), and AI summaries ("Claude connected" or "Template only").
+- Pipeline health: Pipeline (Receiving, Idle or Waiting for events), Events stored ("Each event_id once"), Last minute, Dead letters ("Rejected, logged, pipeline kept going"), Open cases (open, pending review and escalated together), and AI summaries ("AI connected" or "Template only").
 - Risk by player: every player plus "Betting market", with the current severity and score ("Now"), "Peak this match", and the rules triggered. It always shows the most recent match.
 - Dead letters: the latest 20 rejected events with reason and detail.
 - "Clear monitor data" (control key): clears events, cases, reviews and dead letters, keeping baselines and thresholds.

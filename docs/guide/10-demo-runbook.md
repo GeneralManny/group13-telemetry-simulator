@@ -36,7 +36,7 @@ Thirty minutes before:
 - [ ] Unlock the dashboard with the control key before the projector is on. The key field is hidden, but do it off screen anyway.
 - [ ] Optional smoke test: press "Send test event" on the Overview tab and confirm the message says every webhook answered 2xx (for example "Test event: 1 of 1 webhooks answered 2xx"). Then reset (next step), because the test event is stored as its own match.
 - [ ] Reset both halves: Overview tab, Reset (if a run exists), then Risk tab, "Clear monitor data". Check Events stored 0, Dead letters 0, Cases "No cases yet".
-- [ ] Risk tab shows "AI summaries: Claude connected".
+- [ ] Risk tab shows "AI summaries: AI connected".
 - [ ] Cases tab: type the reviewer name into the review panel once in rehearsal so the browser remembers it.
 - [ ] Close any tab showing Railway variables, `.env` files or keys.
 - [ ] Browser zoom about 125%, tabs in this order: dashboard, Slack, n8n editor.
@@ -55,7 +55,7 @@ Cue: "Team A will show how the data flows."
 
 ### 2. Architecture, 45 seconds [0:45]
 
-Team A says: "The simulator plays the role of a live match feed. Each event goes to our n8n webhook, which validates it and hands it to the monitor. The monitor stores it in Postgres, scores it against the player's baseline, and opens a case at High. A second n8n workflow writes an evidence summary with Claude and alerts Slack, and an administrator decides. This dashboard shows every step."
+Team A says: "The simulator plays the role of a live match feed. Each event goes to our n8n webhook, which validates it and hands it to the monitor. The monitor stores it in Postgres, scores it against the player's baseline, and opens a case at High. A second n8n workflow writes an evidence summary with a free AI model and alerts Slack, and an administrator decides. This dashboard shows every step."
 
 Click: switch to the n8n editor tab and show "G13 1 - Ingest telemetry" for five seconds, then back to the dashboard.
 
@@ -99,7 +99,7 @@ Cue: "Team C will open the evidence."
 
 Click: Cases tab, select the case (CASE-XXXXXX, Critical 95, "Blue Seven (player_07)").
 
-Team C says: "Everything here comes from the evidence packet. 'Why this was flagged' lists each rule with the measured value: average reaction time 118 ms, 5.1 standard deviations below this player's baseline of 229 ms; accuracy 79.5% against 46.1%; the unexplained odds move. The summary was written by Claude from this packet only, and checked for accusing language. It ends by recommending human review."
+Team C says: "Everything here comes from the evidence packet. 'Why this was flagged' lists each rule with the measured value: average reaction time 118 ms, 5.1 standard deviations below this player's baseline of 229 ms; accuracy 79.5% against 46.1%; the unexplained odds move. The summary was written by an AI model from this packet only, and checked for accusing language. It ends by recommending human review."
 
 Click: Slack tab. "Two messages for the whole match: 'New HIGH integrity case', then 'rose to CRITICAL'. Not one per event. Each says: signals for human review only, no conclusion has been made."
 
@@ -117,7 +117,7 @@ Cue: "Team D on reliability."
 
 ### 8. Reliability and conclusion, 45 seconds [7:30]
 
-Team D says: "Event IDs are the database's primary key, so retries and duplicates are stored once. Invalid events go to a dead-letter store with their reason and the pipeline keeps going. Every case has an audit trail. The whole demo resets and replays to the same result because the simulator is seeded. We have 159 automated tests. Current limitations: one instance, simulated baselines, and case pages readable without a key because the data is simulated."
+Team D says: "Event IDs are the database's primary key, so retries and duplicates are stored once. Invalid events go to a dead-letter store with their reason and the pipeline keeps going. Every case has an audit trail. The whole demo resets and replays to the same result because the simulator is seeded. We have 165 automated tests. Current limitations: one instance, simulated baselines, and case pages readable without a key because the data is simulated."
 
 Emmanuel closes: "The simulator can be replaced by a real telemetry provider without changing the monitor. The system gives administrators fast, explainable signals; people make the decisions. Thank you."
 

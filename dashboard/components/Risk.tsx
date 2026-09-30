@@ -131,7 +131,7 @@ export function Risk({ session, accessKey, notify }: Props) {
             <div className="stat">
               <span className="stat-label">AI summaries</span>
               <StatusChip tone={p.ai_configured ? "good" : "warning"}>
-                {p.ai_configured ? "Claude connected" : "Template only"}
+                {p.ai_configured ? "AI connected" : "Template only"}
               </StatusChip>
             </div>
           </>

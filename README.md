@@ -271,6 +271,8 @@ Webhook headers: `Content-Type: application/json`, `X-Simulator-Token` (when
 | `TEAM_ACCESS_KEY`                | no                     |                 | Webhook management only. Share with team leads         |
 | `DATA_DIR`                       | recommended            |                 | Where dashboard webhooks are saved. `/data` on Railway |
 | `MAX_WEBHOOKS`                   | no                     | 20              |                                                        |
+| `OPENROUTER_API_KEY`             | no                     |                 | AI case summaries. Without it, the template is used    |
+| `OPENROUTER_MODELS`              | no                     | free models     | Comma-separated OpenRouter models, tried in order      |
 
 `/ready` returns 503 and lists variable names (never values) when required variables are missing,
 invalid, or still set to the `.env.example` placeholders. Logs redact API keys, tokens and

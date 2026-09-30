@@ -32,7 +32,8 @@ telemetry-simulator:
 | N8N_WEBHOOK_TOKEN         | Shared token sent as the `X-Simulator-Token` header                                    |
 | DATABASE_URL              | Connection to the Postgres service                                                     |
 | MONITOR_INGEST_KEY        | Key n8n uses to write events, dead letters, summaries, alert results and Slack reviews |
-| ANTHROPIC_API_KEY         | Claude summaries. Without it, the template is used                                     |
+| OPENROUTER_API_KEY        | AI summaries through OpenRouter free models. Without it, the template is used          |
+| OPENROUTER_MODELS         | Optional. Comma-separated free models, tried in order                                  |
 | PUBLIC_BASE_URL           | The dashboard address, used for the "Open case" link                                   |
 | DATA_DIR                  | `/data`, a Railway volume where dashboard webhooks are saved                           |
 | RAILWAY_RUN_UID           | `0`, so the app can write to the volume                                                |
@@ -133,7 +134,7 @@ DATABASE_URL=postgres://postgres:localpass@localhost:55433/postgres NODE_ENV=dev
 | Every event is a dead letter "missing or wrong X-Simulator-Token header" | Variables on both services                                        | `N8N_WEBHOOK_TOKEN` and `SIMULATOR_WEBHOOK_TOKEN` differ                                            |
 | n8n calls to the monitor fail with 401 or 403                            | n8n executions list                                               | `MONITOR_INGEST_KEY` differs between services                                                       |
 | Case created but "Slack alert: Not delivered"                            | Case page error text                                              | `slack_not_configured`: set `SLACK_WEBHOOK_URL`. Other errors: Slack webhook revoked or Slack down  |
-| Summary always "Template"                                                | Risk tab "AI summaries"                                           | `ANTHROPIC_API_KEY` missing or invalid; the log names the reason, for example `ai_auth_failed`      |
+| Summary always "Template"                                                | Risk tab "AI summaries"                                           | `OPENROUTER_API_KEY` missing or invalid; the log names the reason, for example `ai_auth_failed`     |
 | Slack buttons missing                                                    | n8n Variables                                                     | `SLACK_INTERACTIVE` is not `true`                                                                   |
 | Slack click does nothing                                                 | "G13 3 - Slack review buttons" executions                         | Interactivity Request URL wrong, or `SLACK_SIGNING_SECRET` wrong ("Slack signature does not match") |
 | Start refused with 409                                                   | Overview state badge                                              | A run is active; Reset first                                                                        |

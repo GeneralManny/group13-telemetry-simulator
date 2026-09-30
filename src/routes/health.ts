@@ -35,7 +35,7 @@ export function registerHealthRoutes(
       environment: deps.config.nodeEnv,
       engine_state: deps.engine.state,
       monitor: deps.monitor ? (deps.monitor.isReady ? "ready" : "connecting") : "not_configured",
-      ai_summaries: deps.config.anthropicApiKey ? "configured" : "fallback_template_only",
+      ai_summaries: deps.config.openRouterApiKey ? "openrouter" : "fallback_template_only",
       missing_variables: r.missing,
       invalid_variables: r.invalid,
       warnings: r.warnings,

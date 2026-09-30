@@ -339,7 +339,7 @@ function evidence() {
         maxTries: 2,
         waitBetweenTries: 2000,
         notes:
-          "The monitor asks Claude for a grounded summary and falls back to a fixed template if the AI is unavailable, slow, or uses accusing words.",
+          "The monitor asks a free AI model for a grounded summary and falls back to a fixed template if the AI is unavailable, slow, or uses accusing words.",
       },
     ),
     http(

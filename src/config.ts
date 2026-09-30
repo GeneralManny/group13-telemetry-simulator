@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_OPENROUTER_MODELS } from "./monitor/ai.js";
 
 export interface AppConfig {
   port: number;
@@ -17,7 +18,10 @@ export interface AppConfig {
   databaseUrl: string | null;
   /** Key n8n uses to write to the monitor (events, summaries, alerts, Slack reviews). */
   monitorIngestKey: string | null;
-  anthropicApiKey: string | null;
+  /** OpenRouter key for AI evidence summaries (free models). */
+  openRouterApiKey: string | null;
+  /** OpenRouter models tried in order. */
+  openRouterModels: string[];
   /** Public https address of this service, used for case links in alerts. */
   publicBaseUrl: string | null;
   defaultEventRate: number;
@@ -48,7 +52,8 @@ const EnvSchema = z.object({
   MAX_WEBHOOKS: opt(z.coerce.number().int().min(1).max(100)),
   DATABASE_URL: opt(z.string().regex(/^postgres(ql)?:\/\//)),
   MONITOR_INGEST_KEY: opt(z.string().min(16)),
-  ANTHROPIC_API_KEY: opt(z.string().min(1)),
+  OPENROUTER_API_KEY: opt(z.string().min(1)),
+  OPENROUTER_MODELS: opt(z.string().regex(/^[\w./:-]+(,[\w./:-]+)*$/)),
   PUBLIC_BASE_URL: opt(z.url({ protocol: /^https?$/ })),
   DEFAULT_EVENT_RATE: opt(z.coerce.number().min(0.1).max(50)),
   DEFAULT_MATCH_DURATION_SECONDS: opt(z.coerce.number().int().min(10).max(7200)),
@@ -100,7 +105,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     maxWebhooks: e.MAX_WEBHOOKS ?? 20,
     databaseUrl: e.DATABASE_URL ?? null,
     monitorIngestKey: e.MONITOR_INGEST_KEY ?? null,
-    anthropicApiKey: e.ANTHROPIC_API_KEY ?? null,
+    openRouterApiKey: e.OPENROUTER_API_KEY ?? null,
+    openRouterModels: e.OPENROUTER_MODELS
+      ? e.OPENROUTER_MODELS.split(",")
+          .map((m) => m.trim())
+          .filter(Boolean)
+      : DEFAULT_OPENROUTER_MODELS,
     publicBaseUrl: e.PUBLIC_BASE_URL ? e.PUBLIC_BASE_URL.replace(/\/$/, "") : null,
     defaultEventRate: e.DEFAULT_EVENT_RATE ?? 2,
     defaultMatchDurationSeconds: e.DEFAULT_MATCH_DURATION_SECONDS ?? 300,

@@ -18,7 +18,7 @@ describe.skipIf(!url)("monitor service (Postgres)", () => {
     const pool = createPool(url!);
     await pool.query("DROP SCHEMA IF EXISTS monitor CASCADE");
     monitor = new MonitorService(pool, silentLogger, {
-      anthropicApiKey: null,
+      ai: { apiKey: null, models: [], appUrl: null },
       publicBaseUrl: "https://example.test",
     });
     await monitor.init();

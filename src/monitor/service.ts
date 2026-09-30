@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { Logger } from "pino";
 import type { SimulatorEvent } from "../contracts/events.js";
 import { PLAYERS } from "../data/players.js";
-import { summarizeCase, type SummaryResult } from "./ai.js";
+import { summarizeCase, type AiConfig, type SummaryResult } from "./ai.js";
 import { migrate, seedReference, transaction, type Client, type Pool } from "./db/database.js";
 import {
   alertDecision,
@@ -70,7 +70,7 @@ export interface IngestResult {
 }
 
 export interface MonitorOptions {
-  anthropicApiKey: string | null;
+  ai: AiConfig;
   publicBaseUrl: string | null;
 }
 
@@ -131,7 +131,7 @@ export class MonitorService {
   }
 
   get aiConfigured(): boolean {
-    return Boolean(this.opts.anthropicApiKey);
+    return Boolean(this.opts.ai.apiKey);
   }
 
   async init(): Promise<void> {
@@ -739,7 +739,7 @@ export class MonitorService {
   /** Generates (or regenerates) the case summary. Falls back to the template on any AI failure. */
   async summarize(caseId: string): Promise<SummaryResult & { case_status: string }> {
     const packet = await this.evidencePacket(caseId);
-    const result = await summarizeCase(packet, this.opts.anthropicApiKey, this.logger);
+    const result = await summarizeCase(packet, this.opts.ai, this.logger);
     return transaction(this.pool, async (c) => {
       const row = await this.caseRow(caseId, c, true);
       const next = row.status === "open" ? "pending_review" : row.status;

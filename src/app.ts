@@ -133,7 +133,11 @@ export async function buildApp(deps: AppDeps): Promise<BuiltApp> {
   // slow or restarting database never blocks the simulator.
   const monitor = config.databaseUrl
     ? new MonitorService(createPool(config.databaseUrl), logger.child({ component: "monitor" }), {
-        anthropicApiKey: config.anthropicApiKey,
+        ai: {
+          apiKey: config.openRouterApiKey,
+          models: config.openRouterModels,
+          appUrl: config.publicBaseUrl,
+        },
         publicBaseUrl: config.publicBaseUrl,
       })
     : null;

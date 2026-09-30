@@ -2,7 +2,7 @@
 
 ## The short version
 
-A simulator pretends to be a live match feed. n8n receives each event, checks it, and hands it to the monitor. The monitor stores it in Postgres, scores it against the player's baseline, and opens a case when the score reaches High. n8n then writes an evidence summary (with Claude), posts a Slack alert, and records the human decision. The dashboard shows all of it.
+A simulator pretends to be a live match feed. n8n receives each event, checks it, and hands it to the monitor. The monitor stores it in Postgres, scores it against the player's baseline, and opens a case when the score reaches High. n8n then writes an evidence summary (with a free AI model), posts a Slack alert, and records the human decision. The dashboard shows all of it.
 
 ## The three Railway services
 
@@ -26,7 +26,7 @@ http://n8n.railway.internal:5678/webhook/telemetry
 
 and n8n calls the monitor API over the private network too. Only the dashboard, the n8n editor, and the Slack button address are public.
 
-Two outside services are used: the Anthropic API (Claude writes the evidence summary) and Slack (alerts and review buttons).
+Two outside services are used: OpenRouter (a free AI model writes the evidence summary) and Slack (alerts and review buttons).
 
 ## Diagram
 
@@ -39,7 +39,7 @@ Two outside services are used: the Anthropic API (Claude writes the evidence sum
 | Monitor API  <---------------+-------------+   (calls the monitor privately)    |
 |   store once, score, cases   |             |                                    |
 |   evidence, reviews, audit   |             | G13 2 - Evidence, AI summary and   |
-|   calls Claude for summaries |             |         Slack alert  ---------------+--> Slack channel
+|   calls AI for summaries     |             |         Slack alert  ---------------+--> Slack channel
 |                              |             |                                    |
 | Dashboard at /               |             | G13 3 - Slack review buttons <-----+--- button clicks
 +--------------+---------------+             +-----------------+------------------+
@@ -103,7 +103,7 @@ Step 5, the monitor stores and scores it, all in one database transaction (eithe
 
 Step 6, n8n starts the second workflow. "One item per alert" turns the alert into one item and "Start evidence and alert" launches "G13 2 - Evidence, AI summary and Slack alert" without waiting for it, so ingestion keeps flowing.
 
-Step 7, evidence and Slack. The second workflow asks the monitor for a summary (Claude, or the fixed template if Claude is unavailable), loads the case, builds the Slack message and posts it. The channel receives "Case CASE-7KQ2XM rose to CRITICAL". Delivery is recorded on the case.
+Step 7, evidence and Slack. The second workflow asks the monitor for a summary (a free AI model, or the fixed template if the AI is unavailable), loads the case, builds the Slack message and posts it. The channel receives "Case CASE-7KQ2XM rose to CRITICAL". Delivery is recorded on the case.
 
 Step 8, dashboard. The dashboard polls the monitor every 2.5 to 3 seconds. The Risk tab shows player_07 at Critical 95 and the Cases tab shows the case with its evidence.
 
