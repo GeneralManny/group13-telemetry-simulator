@@ -115,9 +115,11 @@ export function Cases({ session, accessKey, notify, onUnlock }: Props) {
       <div className="section-intro">
         <h1>Integrity cases</h1>
         <p>
-          A case opens when a player&apos;s or the market&apos;s risk score reaches High. Each case
-          lists the measurements behind it. These are signals for review, not conclusions: an
-          administrator decides every case.
+          A case opens when a player&apos;s risk score reaches High (60). An unexplained odds move
+          on its own scores Monitor and shows on the Risk tab; it raises a player&apos;s case when
+          it lands close to that player&apos;s performance change. Each case lists the measurements
+          behind it. These are signals for review, not conclusions: an administrator decides every
+          case.
         </p>
       </div>
 

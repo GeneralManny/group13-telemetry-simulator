@@ -180,6 +180,22 @@ describe.skipIf(!url)("monitor service (Postgres)", () => {
     expect(d.evidence.evidence_event_count).toBe(evidenceBefore);
   }, 60_000);
 
+  it("approves a case for investigation directly from pending review (T14)", async () => {
+    await play({ preset: "performance_demo", duration_seconds: 160 });
+    const [c] = await monitor.listCases({});
+    await monitor.summarize(c!.case_id);
+    const r = await monitor.review(c!.case_id, {
+      action: "approve_for_investigation",
+      reviewer: "Admin Cy",
+      notes: "Refer to the integrity officer",
+      channel: "dashboard",
+    });
+    expect(r).toMatchObject({ status: "approved", duplicate: false });
+    const d = await monitor.caseDetail(c!.case_id);
+    expect(d.case).toMatchObject({ status: "approved", reviewer: "Admin Cy" });
+    expect(d.case.reviewed_at).not.toBeNull();
+  }, 60_000);
+
   it("marks an unknown player as insufficient_data instead of inventing a baseline (T10)", async () => {
     const { events } = simulate({ scenario: "normal", seed: 2, duration_seconds: 30 });
     const action = events.find((e) => e.event_type === "player_action")!;

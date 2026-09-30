@@ -14,11 +14,14 @@ a verdict downstream.
 
 ## Dashboard
 
-Open the service URL in a browser. The console has four tabs:
+Open the service URL in a browser. The console has six tabs:
 
 - Overview: current match, score and clock, delivery counters, live odds chart, player metrics
   against their baseline range, and a players table. With the control key: preset buttons,
   a custom run form, pause, resume, stop, replay, reset, and a test event.
+- Cases: integrity cases with their evidence (rules, measured values against baseline, score
+  breakdown and history, AI or template summary, Slack delivery) and the human review panel.
+- Risk: every player's live risk score, pipeline health, and dead letters.
 - Webhooks: teams add their own n8n Webhook URL (with an optional shared token and an event
   type filter), press Test, and see delivery health per destination. Every enabled webhook
   receives every event from the next event onwards, in addition to `N8N_WEBHOOK_URL`.

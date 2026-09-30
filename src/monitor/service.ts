@@ -516,7 +516,7 @@ export class MonitorService {
       // clearest explanation, while score tracks the latest evaluation.
       const peak = r.score > row.peak_score;
       await c.query(
-        `UPDATE monitor.cases SET score = $2, window_end = $3, updated_at = now()
+        `UPDATE monitor.cases SET score = $2, window_end = GREATEST(window_end, $3), updated_at = now()
            ${peak ? ", peak_score = $2, severity = $4, components = $5, rules = $6" : ""}
          WHERE case_id = $1`,
         peak

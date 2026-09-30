@@ -14,7 +14,10 @@
       "name": "Receive simulator event",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [0, 300],
+      "position": [
+        0,
+        300
+      ],
       "webhookId": "6e1e1e1e-0000-4000-8000-000000000001",
       "notes": "Production URL /webhook/telemetry. Answers 200 immediately so the simulator is never slowed down."
     },
@@ -26,7 +29,10 @@
       "name": "Validate and normalise",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -57,7 +63,10 @@
       "name": "Valid event?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [480, 300]
+      "position": [
+        480,
+        300
+      ]
     },
     {
       "parameters": {
@@ -83,12 +92,15 @@
       "name": "Store and score in monitor",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [720, 200],
+      "position": [
+        720,
+        200
+      ],
       "retryOnFail": true,
-      "maxTries": 3,
-      "waitBetweenTries": 1000,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
       "onError": "continueErrorOutput",
-      "notes": "Duplicates are stored once by the monitor (event_id is the primary key). Retries up to 3 times."
+      "notes": "Duplicates are stored once by the monitor (event_id is the primary key). Retries 5 times, 3 seconds apart, which covers a short database restart. Failed runs stay in n8n's execution list and can be retried from there."
     },
     {
       "parameters": {
@@ -98,7 +110,10 @@
       "name": "One item per alert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [960, 120]
+      "position": [
+        960,
+        120
+      ]
     },
     {
       "parameters": {
@@ -117,7 +132,10 @@
       "name": "Start evidence and alert",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
-      "position": [1200, 120]
+      "position": [
+        1200,
+        120
+      ]
     },
     {
       "parameters": {
@@ -143,7 +161,10 @@
       "name": "Dead letter: rejected by monitor",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [960, 320],
+      "position": [
+        960,
+        320
+      ],
       "onError": "continueRegularOutput"
     },
     {
@@ -170,7 +191,10 @@
       "name": "Dead letter: invalid event",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [720, 440],
+      "position": [
+        720,
+        440
+      ],
       "onError": "continueRegularOutput"
     }
   ],

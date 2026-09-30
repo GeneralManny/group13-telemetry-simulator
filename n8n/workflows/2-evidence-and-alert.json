@@ -9,7 +9,10 @@
       "name": "When called by ingestion",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [0, 300]
+      "position": [
+        0,
+        300
+      ]
     },
     {
       "parameters": {
@@ -32,7 +35,10 @@
       "name": "Generate evidence summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 2000,
@@ -50,7 +56,10 @@
       "name": "Load case and evidence",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [480, 300],
+      "position": [
+        480,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000
@@ -63,7 +72,10 @@
       "name": "Build Slack message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [720, 300]
+      "position": [
+        720,
+        300
+      ]
     },
     {
       "parameters": {
@@ -94,7 +106,10 @@
       "name": "Slack configured?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [960, 300]
+      "position": [
+        960,
+        300
+      ]
     },
     {
       "parameters": {
@@ -111,7 +126,10 @@
       "name": "Send Slack alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1200, 200],
+      "position": [
+        1200,
+        200
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
@@ -141,7 +159,10 @@
       "name": "Record alert sent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1440, 100],
+      "position": [
+        1440,
+        100
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000
@@ -170,7 +191,10 @@
       "name": "Record alert failed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1440, 300],
+      "position": [
+        1440,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000
@@ -199,7 +223,10 @@
       "name": "Record Slack not configured",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1200, 420],
+      "position": [
+        1200,
+        420
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 1000

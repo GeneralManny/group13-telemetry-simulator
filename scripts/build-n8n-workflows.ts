@@ -201,11 +201,11 @@ function ingestion() {
       [720, 200],
       {
         retryOnFail: true,
-        maxTries: 3,
-        waitBetweenTries: 1000,
+        maxTries: 5,
+        waitBetweenTries: 3000,
         onError: "continueErrorOutput",
         notes:
-          "Duplicates are stored once by the monitor (event_id is the primary key). Retries up to 3 times.",
+          "Duplicates are stored once by the monitor (event_id is the primary key). Retries 5 times, 3 seconds apart, which covers a short database restart. Failed runs stay in n8n's execution list and can be retried from there.",
       },
     ),
     code("One item per alert", SPLIT_ALERTS_JS, [960, 120]),
