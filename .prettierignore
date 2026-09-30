@@ -6,3 +6,4 @@ dashboard/.next
 dashboard/out
 dashboard/node_modules
 dashboard/package-lock.json
+docs/plans

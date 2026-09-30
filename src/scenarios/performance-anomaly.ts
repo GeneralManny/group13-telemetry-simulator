@@ -33,7 +33,7 @@ export interface AnomalyProfile {
 }
 
 export const ANOMALY_PROFILES: Readonly<Record<AnomalyDirection, AnomalyProfile>> = {
-  // Overperformance: aim-assist style pattern. ~115 ms reactions, ~80% accuracy for player_07.
+  // Overperformance: far faster and more accurate than baseline. ~115 ms reactions, ~80% accuracy for player_07.
   over: {
     reaction_mean_mult: 0.5,
     reaction_sd_mult: 0.4,
@@ -47,7 +47,7 @@ export const ANOMALY_PROFILES: Readonly<Record<AnomalyDirection, AnomalyProfile>
     victim_weight: 0.5,
     fight_win_shift: 0.1,
   },
-  // Underperformance: match-fixing style pattern. Slow reactions, poor aim, dies more often.
+  // Underperformance: far slower and less accurate than baseline, and dies more often.
   under: {
     reaction_mean_mult: 1.45,
     reaction_sd_mult: 1.2,

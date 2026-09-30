@@ -12,3 +12,12 @@ dashboard/out/
 dashboard/next-env.d.ts
 dashboard/*.tsbuildinfo
 /data/
+
+
+# Stray screen captures and credential files
+Screenshot*.png
+Screen?Shot*.png
+screenshot*.png
+capture*.png
+client_secret_*.json
+.mcp.json
