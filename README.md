@@ -1,30 +1,119 @@
 # Group 13 Esports Integrity Monitor
 
-Live anti-cheat and match integrity monitoring for esports tournaments: a telemetry and odds simulator, an n8n
-pipeline, an explainable risk engine, evidence summaries, Slack alerts and human review. The system flags signals
-for review; a person makes every decision.
+Live anti-cheat and match integrity monitoring for esports tournaments. The system watches live match telemetry and
+betting odds, compares each player with their own history, opens a case when the signals add up, writes an evidence
+summary, alerts tournament administrators in Slack, and records their decision with a full audit trail.
+
+The system flags signals for human review. No part of it states or implies that a player cheated or that a match was
+fixed; a person makes every decision, and the wording of every alert, summary and screen is checked for this.
 
 For examiners:
 
-- [Final deliverables](deliverables/README.md): README files, documentation and project assets (the team member list is submitted separately)
-- [Team guide](docs/guide/README.md): how every part works, start with chapter 00
+- [Final deliverables](deliverables/README.md): README files, documentation and project assets (the team member list
+  is submitted separately)
+- [Team guide](docs/guide/README.md): how every part works, in plain language; start with chapter 00
+- [Test results](deliverables/TEST_RESULTS.md): 172 of 172 automated tests pass, plus dated end-to-end runs
 - [Live dashboard](https://telemetry-simulator-production-bf55.up.railway.app)
 
-## The simulator
+## How it works
 
-A hosted API that behaves like a live esports telemetry and betting-odds provider. It streams
-schema version 1.0 events, one per webhook request, to the Group 13 n8n webhook, and supports
-normal, performance-anomaly, odds-integrity, combined, and pipeline-failure scenarios.
+```text
+Simulator ──one event per request──▶ n8n "G13 1 Ingest telemetry"
+(live match + odds)                    validate token and contract ──invalid──▶ dead letter
+                                       │
+                                       ▼
+                                     Monitor API: store once (event_id), score risk
+                                       │ case reaches High
+                                       ▼
+                                     n8n "G13 2 Evidence and alert"
+                                       evidence packet ─▶ AI summary (checked) or template
+                                       │
+                                       ▼
+                                     Slack alert with Approve / Escalate / Dismiss
+                                       │                                   │
+                                       ▼                                   ▼
+                       n8n "G13 3 Slack review buttons"           Dashboard Cases tab
+                       (verifies Slack's signature)               (control key)
+                                       └──────────▶ review + audit trail ◀─┘
+```
 
-The simulator supplies test evidence only. It never labels a player as a cheater and never sends
-a verdict downstream.
+1. The simulator plays a match: player actions, combat, 30-second player snapshots and betting-odds updates, about two
+   events a second. Saved presets inject a performance change, an unexplained odds move, or pipeline faults.
+2. n8n receives each event, checks the shared token and the event contract, and passes valid events to the monitor.
+   Anything invalid is recorded as a dead letter with its reason; later events keep flowing.
+3. The monitor stores each event once (the `event_id` is the primary key, so retries and duplicates are harmless) and
+   scores every player from 0 to 100 against their own baseline: performance up to 60 points, an unexplained odds
+   move up to 30, several signals at once up to 10. Every point names its rule and the measured values.
+4. At 60 (High) a case opens and n8n builds the evidence packet, asks a free AI model for a plain-language summary,
+   checks the wording and the facts, and falls back to a fixed template if the summary fails a check or no model
+   answers. One Slack message goes out when the case opens and one more only if it becomes more severe.
+5. An administrator approves it for investigation, escalates or dismisses it, in Slack or in the dashboard. The
+   decision, reviewer, notes and time are stored; repeating a click changes nothing, and a final decision cannot be
+   overwritten.
 
-- Runtime: Node.js 20.9+, TypeScript, Fastify 5, Zod 4, Pino
-- Dashboard: Next.js 16 static export, served by the same service at `/`
-- One instance, one active run. Match state in memory; dashboard webhooks saved to `DATA_DIR`
-- Deterministic: the same scenario, seed and configuration always produce the same match content
+In the `final_demo` preset, Blue Seven (player_07) changes at 1:00 of match time, a case opens at High a few seconds
+later, the odds shorten 30.1% for Blue Seven's team at 1:30 with no round result nearby, and the case rises to
+Critical 95. The preset is seeded, so it gives the same result every time.
 
-## Dashboard
+## Architecture
+
+Three services on Railway, one project:
+
+| Service               | What it runs                                                                                          | Code                                     |
+| --------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `telemetry-simulator` | One Node.js service: the simulator, the monitor API and the dashboard (served at `/`)                 | `src/`, `dashboard/`, root `Dockerfile`  |
+| `n8n`                 | Self-hosted n8n 2.41.4 with the three workflows, imported and published from this repository on start | `n8n/`, `scripts/build-n8n-workflows.ts` |
+| `Postgres`            | One database, two schemas: `monitor` (events, baselines, cases, evidence, reviews, audit) and `n8n`   | `src/monitor/db/`                        |
+
+The simulator and the monitor share a process but stay separate: the simulator behaves like an outside telemetry
+provider and knows nothing about the monitor. n8n reaches the monitor over Railway's private network.
+
+Stack: Node.js 20.9+, TypeScript, Fastify 5, Zod 4, Pino, PostgreSQL, n8n 2.41.4, Next.js 16 (static export), Vitest.
+AI summaries use free models on OpenRouter. Alerts and review buttons use a Slack app.
+
+## The parts
+
+### Simulator
+
+A hosted API that behaves like a live esports telemetry and betting-odds provider. It streams schema version 1.0
+events, one per webhook request, and supports normal, performance-anomaly, odds-integrity, combined, and
+pipeline-failure scenarios. It supplies test evidence only and never sends a verdict downstream. One active run at a
+time; match state is in memory; the same scenario, seed and configuration always produce the same match content.
+Guide: [chapter 02](docs/guide/02-simulator.md).
+
+### n8n workflows
+
+| Workflow                         | Does                                                                                                                    |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| G13 1 - Ingest telemetry         | Answers the simulator at once, checks `X-Simulator-Token` and the contract, stores and scores, or records a dead letter |
+| G13 2 - Evidence and Slack alert | Builds the evidence packet, gets the AI or template summary, posts the Slack alert, records delivery                    |
+| G13 3 - Slack review buttons     | Verifies the Slack signature and timestamp, records the decision in the monitor, replies in Slack                       |
+
+The workflows are written as readable code in `scripts/build-n8n-workflows.ts` and generated with `npm run n8n:build`.
+Every secret is read through `$env`, so the JSON in `n8n/workflows/` holds none. Guide:
+[chapters 03](docs/guide/03-n8n-ingestion.md), [06](docs/guide/06-cases-evidence-and-ai.md) and
+[07](docs/guide/07-slack-and-human-review.md).
+
+### Monitor and risk engine
+
+Baselines for every player are learned from 20 simulated normal matches. The engine looks at a rolling 30-second window
+of match time and measures how many standard deviations each metric sits from that player's baseline. Thresholds:
+Monitor 30, High 60, Critical 80. The rules are pure functions with no I/O, so every score can be recomputed from the
+stored evidence. Guide: [chapters 04](docs/guide/04-database.md) and [05](docs/guide/05-baselines-and-risk-engine.md).
+
+### Evidence summaries
+
+The AI receives only the evidence packet, with the direction of each odds move stated in plain words. Its answer is
+rejected if it uses accusing language or reverses the odds direction; the next free model is then tried, and the
+deterministic template is used if none passes. Every case is reviewable even with no AI available. Guide:
+[chapter 06](docs/guide/06-cases-evidence-and-ai.md).
+
+### Slack and human review
+
+Alerts carry the severity, score, subject, time window, every rule that scored, the summary and the line "Signals for
+human review only. No conclusion has been made." Guide: [chapter 07](docs/guide/07-slack-and-human-review.md).
+
+### Dashboard
 
 Open the service URL in a browser. The console has six tabs:
 
@@ -42,13 +131,18 @@ Open the service URL in a browser. The console has six tabs:
 
 Access keys are entered in the browser and kept in that tab only (sessionStorage):
 
-| Key               | Can do                                                  |
-| ----------------- | ------------------------------------------------------- |
-| `CONTROL_API_KEY` | Everything: run control, test events, webhooks          |
-| `TEAM_ACCESS_KEY` | Add, test, pause and remove webhooks. Cannot touch runs |
-| None              | View the dashboard, status, charts and live events      |
+| Key                  | Can do                                                                      |
+| -------------------- | --------------------------------------------------------------------------- |
+| `CONTROL_API_KEY`    | Everything: run control, test events, webhooks, case reviews, monitor reset |
+| `TEAM_ACCESS_KEY`    | Add, test, pause and remove webhooks. Cannot touch runs or cases            |
+| `MONITOR_INGEST_KEY` | Used by n8n only: write events, summaries, alerts and Slack decisions       |
+| None                 | View the dashboard, status, charts, live events, cases and risk             |
+
+Guide: [chapter 08](docs/guide/08-dashboard.md).
 
 ## Quick start (local)
+
+Simulator and dashboard only:
 
 ```bash
 npm install && npm run install:dashboard
@@ -57,6 +151,17 @@ cp .env.example .env          # then edit: NODE_ENV=development, N8N_WEBHOOK_URL
 npm run dev                   # terminal 2: simulator API on http://localhost:3000
 npm run dev:dashboard         # terminal 3: dashboard with hot reload on http://localhost:3001
 ```
+
+With the monitor, add a local Postgres and point `DATABASE_URL` at it:
+
+```bash
+npm run build:dashboard
+docker run -d --name g13-local-pg -e POSTGRES_PASSWORD=localpass -p 55433:5432 postgres:17-alpine
+DATABASE_URL=postgres://postgres:localpass@localhost:55433/postgres NODE_ENV=development npm run dev
+```
+
+`localpass` is a throwaway password for a database on your own machine. On first start the monitor creates its
+tables and computes the baselines.
 
 `npm run dev:dashboard` proxies `/api` to the simulator (set `SIMULATOR_URL` to point elsewhere).
 To see the production setup instead, run `npm run build:dashboard` once; the simulator then
@@ -75,15 +180,16 @@ endpoints are open. Neither shortcut applies in production.
 | ----------------------------- | -------------------------------------------------------------------------- |
 | `npm run dev`                 | Run from source with reload and pretty logs                                |
 | `npm run dev:dashboard`       | Next.js dashboard with hot reload on port 3001                             |
-| `npm run build:dashboard`     | Static export to `dashboard/out/`, served at `/` by the simulator          |
+| `npm run build:dashboard`     | Static export to `dashboard/out/`, served at `/` by the service            |
 | `npm run build` / `npm start` | Production build to `dist/`, then run it                                   |
-| `npm test`                    | Unit, API, webhook and end-to-end tests (Vitest)                           |
+| `npm test`                    | Unit, API, webhook, monitor and end-to-end tests (Vitest)                  |
 | `npm run check`               | Typecheck, lint, format check and tests                                    |
+| `npm run n8n:build`           | Generate the three n8n workflow files in `n8n/workflows/`                  |
 | `npm run samples`             | Write sample payloads for every scenario to `samples/`                     |
 | `npm run schema`              | Export the event contract as JSON Schema to `docs/event-schema.json`       |
 | `npm run mock-webhook`        | Local stand-in for n8n. `MOCK_FAIL_RATE=0.2` makes it fail 20% of requests |
 
-## API
+## Simulator API
 
 Base URL: the Railway public domain, for example `https://<service>.up.railway.app`.
 
@@ -177,6 +283,26 @@ curl -X POST "$BASE/api/v1/test-event" -H "X-API-Key: $KEY" -H "content-type: ap
 response shows exactly what n8n returned. Test events use `scenario: "integration_test"` and a
 `test_` run ID.
 
+## Monitor API
+
+Base path `/api/v1/monitor`. Returns 503 `monitor_unavailable` until the database is connected.
+
+| Method | Path                                     | Key               | Purpose                                                                 |
+| ------ | ---------------------------------------- | ----------------- | ----------------------------------------------------------------------- |
+| GET    | `/overview`                              | none              | Pipeline health, events stored, dead letters, cases by status           |
+| GET    | `/cases`                                 | none              | Case list                                                               |
+| GET    | `/cases/:id`                             | none              | One case with evidence, score history, reviews and audit trail          |
+| GET    | `/cases/:id/evidence`                    | none              | The evidence packet the summary and alert are built from                |
+| GET    | `/players`                               | none              | Every player's current risk score, rules and baseline                   |
+| GET    | `/dead-letters?limit=`                   | none              | Rejected events with their reason                                       |
+| GET    | `/events/recent?limit=`                  | none              | Most recently stored events                                             |
+| GET    | `/settings`                              | none              | Risk thresholds                                                         |
+| POST   | `/events`                                | ingest or control | Store and score one event (idempotent on `event_id`)                    |
+| POST   | `/dead-letters`                          | ingest or control | Record a rejected event and its reason                                  |
+| POST   | `/cases/:id/summary`, `/cases/:id/alert` | ingest or control | Record the summary and the Slack delivery result                        |
+| POST   | `/cases/:id/review`                      | ingest or control | Approve for investigation, escalate or dismiss, with reviewer and notes |
+| POST   | `/reset`                                 | control           | Clear run data (events, cases, dead letters); baselines are kept        |
+
 ## Scenarios and presets
 
 | Scenario              | What happens                                                                                                                                                                                          | Expected downstream result                                |
@@ -264,27 +390,48 @@ Webhook headers: `Content-Type: application/json`, `X-Simulator-Token` (when
 
 ## Configuration
 
-| Variable                         | Required in production | Default         | Notes                                                  |
-| -------------------------------- | ---------------------- | --------------- | ------------------------------------------------------ |
-| `PORT`                           | no                     | 3000            | Railway sets this                                      |
-| `NODE_ENV`                       | yes                    | development     | Set to `production` on Railway                         |
-| `LOG_LEVEL`                      | no                     | info            | `debug` also logs health and status requests           |
-| `N8N_WEBHOOK_URL`                | yes                    |                 | Team A's production webhook URL                        |
-| `N8N_WEBHOOK_TOKEN`              | recommended            |                 | Sent as `X-Simulator-Token`                            |
-| `CONTROL_API_KEY`                | yes                    |                 | 16+ characters. Protects control endpoints             |
-| `DEFAULT_EVENT_RATE`             | no                     | 2               | Events per second                                      |
-| `DEFAULT_MATCH_DURATION_SECONDS` | no                     | 300             |                                                        |
-| `DELIVERY_TIMEOUT_MS`            | no                     | 5000            |                                                        |
-| `MAX_DELIVERY_ATTEMPTS`          | no                     | 4               | Including the first attempt                            |
-| `MAX_QUEUE_SIZE`                 | no                     | 1000            |                                                        |
-| `DELIVERY_CONCURRENCY`           | no                     | 4               |                                                        |
-| `RETRY_DELAYS_MS`                | no                     | 1000,3000,10000 |                                                        |
-| `ALLOWED_ORIGIN`                 | no                     |                 | Comma-separated dashboard origins for browser access   |
-| `TEAM_ACCESS_KEY`                | no                     |                 | Webhook management only. Share with team leads         |
-| `DATA_DIR`                       | recommended            |                 | Where dashboard webhooks are saved. `/data` on Railway |
-| `MAX_WEBHOOKS`                   | no                     | 20              |                                                        |
-| `OPENROUTER_API_KEY`             | no                     |                 | AI case summaries. Without it, the template is used    |
-| `OPENROUTER_MODELS`              | no                     | free models     | Comma-separated OpenRouter models, tried in order      |
+Every secret lives in the hosting platform's variables, never in this repository. The example files list the names
+only: [.env.example](.env.example) for the main service and [n8n/.env.example](n8n/.env.example) for n8n.
+
+Main service (`telemetry-simulator`):
+
+| Variable                         | Required in production | Default         | Notes                                                         |
+| -------------------------------- | ---------------------- | --------------- | ------------------------------------------------------------- |
+| `PORT`                           | no                     | 3000            | Railway sets this                                             |
+| `HOST`                           | no                     | 0.0.0.0         | `::` on Railway, so n8n can reach it over the private network |
+| `NODE_ENV`                       | yes                    | development     | Set to `production` on Railway                                |
+| `LOG_LEVEL`                      | no                     | info            | `debug` also logs health and status requests                  |
+| `N8N_WEBHOOK_URL`                | yes                    |                 | The ingestion workflow's production webhook URL               |
+| `N8N_WEBHOOK_TOKEN`              | recommended            |                 | Sent as `X-Simulator-Token`                                   |
+| `CONTROL_API_KEY`                | yes                    |                 | 16+ characters. Protects control, review and reset endpoints  |
+| `DATABASE_URL`                   | for the monitor        |                 | Postgres connection. Without it only the simulator runs       |
+| `MONITOR_INGEST_KEY`             | for the monitor        |                 | 16+ characters. The key n8n uses to write to the monitor      |
+| `PUBLIC_BASE_URL`                | recommended            |                 | This service's public address, for "Open case" links          |
+| `DEFAULT_EVENT_RATE`             | no                     | 2               | Events per second                                             |
+| `DEFAULT_MATCH_DURATION_SECONDS` | no                     | 300             |                                                               |
+| `DELIVERY_TIMEOUT_MS`            | no                     | 5000            |                                                               |
+| `MAX_DELIVERY_ATTEMPTS`          | no                     | 4               | Including the first attempt                                   |
+| `MAX_QUEUE_SIZE`                 | no                     | 1000            |                                                               |
+| `DELIVERY_CONCURRENCY`           | no                     | 4               |                                                               |
+| `RETRY_DELAYS_MS`                | no                     | 1000,3000,10000 |                                                               |
+| `ALLOWED_ORIGIN`                 | no                     |                 | Comma-separated dashboard origins for browser access          |
+| `TEAM_ACCESS_KEY`                | no                     |                 | Webhook management only. Share with team leads                |
+| `DATA_DIR`                       | recommended            |                 | Where dashboard webhooks are saved. `/data` on Railway        |
+| `MAX_WEBHOOKS`                   | no                     | 20              |                                                               |
+| `OPENROUTER_API_KEY`             | no                     |                 | AI case summaries. Without it, the template is used           |
+| `OPENROUTER_MODELS`              | no                     | free models     | Comma-separated OpenRouter models, tried in order             |
+
+n8n service, the variables the workflows read (n8n's own settings are in `n8n/.env.example`):
+
+| Variable                  | Notes                                                                               |
+| ------------------------- | ----------------------------------------------------------------------------------- |
+| `SIMULATOR_WEBHOOK_TOKEN` | Must equal `N8N_WEBHOOK_TOKEN` on the main service                                  |
+| `MONITOR_API_URL`         | The main service's private address                                                  |
+| `MONITOR_INGEST_KEY`      | Same value as on the main service                                                   |
+| `DASHBOARD_URL`           | Used in alert links                                                                 |
+| `SLACK_WEBHOOK_URL`       | The Slack app's incoming webhook. Without it, alerts are recorded as not configured |
+| `SLACK_SIGNING_SECRET`    | Verifies that button clicks came from Slack                                         |
+| `SLACK_INTERACTIVE`       | `true` adds the Approve, Escalate and Dismiss buttons                               |
 
 `/ready` returns 503 and lists variable names (never values) when required variables are missing,
 invalid, or still set to the `.env.example` placeholders. Logs redact API keys, tokens and
@@ -292,73 +439,113 @@ authorization headers, and status shows only the webhook host, never its path.
 
 ## Deploying to Railway
 
-1. Create a project and a service from this repository (or from the Docker image). `railway.json`
-   selects the Dockerfile, sets the health check to `/health`, and keeps one replica.
-2. Without Docker, use build `npm ci && npm run build` and start `npm run start`.
-3. Add the variables above in the service's Variables tab. Set `NODE_ENV=production`.
-4. Generate a public domain under Settings, Networking.
-5. Add a volume mounted at `/data` and set `DATA_DIR=/data`, so webhooks added in the dashboard
-   survive restarts and redeploys. The image runs as the `node` user, so also set
-   `RAILWAY_RUN_UID=0` (Railway volumes are owned by root).
-6. Verify:
-   1. `GET /health` returns 200.
-   2. `GET /ready` returns `"status": "ready"`.
-   3. `GET /api/v1/status` shows `"status": "idle"`.
-   4. `POST /api/v1/test-event` returns `"delivery": {"ok": true}` and Team A sees the event.
-   5. Start `demo_normal`, confirm `events_generated` and `events_delivered` rise together.
-   6. Reset, start `performance_demo`, confirm Team B sees player_07's reaction time drop at 90 s.
-   7. Check the Railway logs for delivery failures and confirm no secrets appear.
-   8. Restart the service and confirm status returns to `idle` with no events sent.
+1. Create a Railway project with a Postgres database.
+2. Main service: create a service from this repository. `railway.json` selects the Dockerfile, sets the health check
+   to `/health`, and keeps one replica. Add the variables above, set `NODE_ENV=production`, generate a public domain,
+   and add a volume mounted at `/data` with `DATA_DIR=/data` (also set `RAILWAY_RUN_UID=0`, because Railway volumes
+   are owned by root and the image runs as the `node` user). Deploy with
+   `railway up --service telemetry-simulator --detach`.
+3. n8n service: deploy the `n8n/` folder as its own service with
+   `railway up n8n --path-as-root --service n8n --detach`, and set the variables from `n8n/.env.example`. On every
+   start it imports and publishes the three workflows from `n8n/workflows/`, so the repository is the source of
+   truth. Create the n8n owner account once in the browser.
+4. Slack: create a Slack app with an incoming webhook to the alerts channel, turn Interactivity on with the Request
+   URL `https://<n8n domain>/webhook/slack-actions` (Socket Mode off), and copy the webhook URL and signing secret
+   into the n8n variables. Step by step: [chapter 07](docs/guide/07-slack-and-human-review.md).
+5. Verify:
+   1. `GET /health` returns 200 and `GET /ready` returns `"status": "ready"` with `"monitor": "ready"`.
+   2. The n8n editor shows the three workflows published.
+   3. `POST /api/v1/test-event` returns `"delivery": {"ok": true}` and the Risk tab's events stored rises.
+   4. Run `final_demo`: one case reaches Critical 95 and two Slack messages arrive.
+   5. Reset both halves: Overview, Reset; then Risk, "Clear monitor data".
 
-The service binds to `0.0.0.0`, starts idle, never starts a scenario on its own, and on SIGTERM stops
-the ticker, gives in-flight deliveries 3 s to finish, and exits.
-
-Keep a known-good release deployed during integration. Do not deploy changes right before an
-integration checkpoint or the final demo.
+The service starts idle, never starts a scenario on its own, and on SIGTERM stops the ticker, gives in-flight
+deliveries 3 s to finish, and exits. Railway is not linked to GitHub, so a push does not deploy. Keep a known-good
+release deployed and do not deploy right before a demo.
 
 ## Final demo
 
-Use the saved preset, never typed values:
+The full timed script with speaking roles is in [chapter 10](docs/guide/10-demo-runbook.md). In short, always using
+the saved presets:
 
-1. `GET /health` and `GET /api/v1/status`: healthy and idle.
-2. `POST /api/v1/runs {"preset":"demo_normal"}`. Show the counters rising. No high-risk alert.
-3. `POST /api/v1/runs/current/reset`.
-4. `POST /api/v1/runs {"preset":"final_demo"}`. player_07 changes at 60 s, odds shock at 90 s.
-5. Follow the case through n8n, risk scoring, evidence, Slack and the dashboard. Human review.
-6. `POST /api/v1/runs/current/reset` to leave a clean state.
+1. Reset both halves. `GET /health` and `GET /api/v1/status`: healthy and idle; events stored 0, no cases.
+2. Run `demo_normal`. The counters rise, every player stays Normal, no case and no Slack message.
+3. Reset the simulator and run `final_demo`. Blue Seven changes at 1:00, a case opens at High about 1:08 with the
+   first Slack alert, the odds move 30.1% at 1:30, and the case rises to Critical 95 about 1:38 with the second alert.
+4. Open the case: rules, measured values against the baseline, score breakdown 55 / 30 / 10, and the summary.
+5. An administrator records a decision in Slack or the dashboard; a second click changes nothing.
+6. Reset to leave a clean state.
 
-Fallback: `samples/` holds a payload set for every scenario, and the whole service runs locally with
-`npm run mock-webhook` plus `npm run dev` (or `docker build -t sim . && docker run -p 3000:3000 sim`).
+Fallback: `samples/` holds a payload set for every scenario, and the whole service runs locally (Quick start above).
+
+## Testing
+
+```bash
+npm run check   # typecheck, lint, format check and tests
+TEST_DATABASE_URL=postgres://postgres:testpass@localhost:55432/monitor_test npm test   # include the Postgres tests
+```
+
+172 tests cover the simulator, delivery, webhooks, the API, the risk engine, the AI summary checks, and the monitor
+against a real Postgres (11 tests, skipped when `TEST_DATABASE_URL` is not set). Each plan scenario T01 to T18 is
+mapped to its test in [chapter 09](docs/guide/09-testing.md); dated results are in
+[deliverables/TEST_RESULTS.md](deliverables/TEST_RESULTS.md).
 
 ## Troubleshooting
 
-| Problem                           | Check                                                                      | Fix                                                                                             |
-| --------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Service unavailable               | Railway service status, `/health`                                          | Read the startup log line "simulator starting"; confirm the port binding                        |
-| `/ready` is 503                   | `missing_variables` / `invalid_variables` in the response                  | Add the named variable and redeploy                                                             |
-| Events generated but not received | `webhook_status`, `last_response_code`, `recent_delivery_failures`         | 404: wrong URL or n8n workflow inactive (test vs production URL). 401/403: token mismatch       |
-| `webhook_status: disabled`        | `webhook_target.mode`                                                      | `N8N_WEBHOOK_URL` is not set, or the run used `"webhook_url": "none"`                           |
-| Duplicate downstream records      | Are they the same `event_id`?                                              | Retries reuse IDs by design. Team A must deduplicate on `event_id`                              |
-| Alerts do not trigger             | `GET /api/v1/runs/current` shows the truth record with exact start seconds | Check the selected player, thresholds and rolling window against `metadata.match_clock_seconds` |
-| Demo results change               | Status `seed` and `preset`                                                 | Use the `final_demo` preset                                                                     |
-| 409 on start                      | Status shows `running` or `paused`                                         | Stop or reset the current run first                                                             |
-| 401 on control calls              | `X-API-Key` header                                                         | Use the `CONTROL_API_KEY` from Railway                                                          |
-| `events_dropped` rising           | Queue full because n8n is slow or down                                     | Fix n8n, or lower the event rate                                                                |
+| Problem                           | Check                                                                      | Fix                                                                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Service unavailable               | Railway service status, `/health`                                          | Read the startup log line "simulator starting"; confirm the port binding                                              |
+| `/ready` is 503                   | `missing_variables` / `invalid_variables` in the response                  | Add the named variable and redeploy                                                                                   |
+| Events generated but not received | `webhook_status`, `last_response_code`, `recent_delivery_failures`         | 404: wrong URL or n8n workflow inactive (test vs production URL). 401/403: token mismatch                             |
+| `webhook_status: disabled`        | `webhook_target.mode`                                                      | `N8N_WEBHOOK_URL` is not set, or the run used `"webhook_url": "none"`                                                 |
+| Duplicate downstream records      | Are they the same `event_id`?                                              | Retries reuse IDs by design. Team A must deduplicate on `event_id`                                                    |
+| Alerts do not trigger             | `GET /api/v1/runs/current` shows the truth record with exact start seconds | Check the selected player, thresholds and rolling window against `metadata.match_clock_seconds`                       |
+| Demo results change               | Status `seed` and `preset`                                                 | Use the `final_demo` preset                                                                                           |
+| 409 on start                      | Status shows `running` or `paused`                                         | Stop or reset the current run first                                                                                   |
+| 401 on control calls              | `X-API-Key` header                                                         | Use the `CONTROL_API_KEY` from Railway                                                                                |
+| `events_dropped` rising           | Queue full because n8n is slow or down                                     | Fix n8n, or lower the event rate                                                                                      |
+| No case appears                   | Risk tab: events stored and dead letters                                   | Dead letters saying "missing or wrong X-Simulator-Token": the two tokens differ. Nothing stored: check n8n is running |
+| Summary always "Template"         | Risk tab "AI summaries", service logs                                      | `OPENROUTER_API_KEY` missing, or every free model busy; the log names the reason                                      |
+| Slack alert not delivered         | Case page, "Slack alert"                                                   | `SLACK_WEBHOOK_URL` not set on the n8n service, or the app was removed from the channel                               |
+| Slack click does nothing          | n8n "G13 3 - Slack review buttons" executions                              | Request URL wrong, Socket Mode on, or `SLACK_SIGNING_SECRET` wrong                                                    |
+
+More in [chapter 11](docs/guide/11-setup-and-operations.md).
+
+## Known limitations
+
+- One instance of each service. The simulator keeps run state in memory, so a restart returns it to idle; any run can
+  be recreated from its preset or seed.
+- Case pages are readable without a key, which is acceptable only because all the data is simulated. Real player data
+  would need login and role-based access. Decisions, resets and settings need a key.
+- Baselines come from 20 simulated matches, not real history.
+- A database outage longer than the ingestion retries (about 15 seconds) loses the events sent during it.
+- An unexplained odds move on its own reaches at most 30 (Monitor), so it shows on the Risk tab but never opens a case.
+- Free AI models change availability without notice; the template is used when none answers.
 
 ## Project layout
 
 ```text
 src/
   server.ts, app.ts, config.ts
-  routes/       health, status, runs, events, auth
-  simulator/    engine (state machine), match-state (match generator), scheduler, random, ids
+  routes/       health, status, runs, events, webhooks, auth
+  simulator/    engine (state machine), match-state, scheduler, random, ids
   generators/   telemetry, combat, odds
   scenarios/    normal, performance-anomaly, odds-integrity, combined, pipeline-failure, presets
-  delivery/     webhook-client, retry-queue
-  contracts/    events (schema 1.0), validation (run requests)
+  delivery/     webhook-client, retry-queue, subscriptions (dashboard webhooks)
+  contracts/    events (schema 1.0), validation
   data/         teams, players, baselines
-tests/          unit, api, integration
-scripts/        generate-samples, export-schema, mock-webhook
-docs/           event-schema.json, HANDOFF.md
+  monitor/
+    db/         Postgres connection and migrations
+    engine/     baselines, risk rules, thresholds, replay
+    service.ts  storage, scoring, cases, reviews, audit trail
+    evidence.ts evidence packet, AI prompt, checks, fallback template
+    ai.ts       OpenRouter summaries with model fallback
+    routes.ts   monitor API
+dashboard/      Next.js console (static export served at /)
+n8n/            n8n service: Dockerfile, start script, workflows/ (generated JSON)
+scripts/        build-n8n-workflows, generate-samples, export-schema, mock-webhook
+tests/          unit, api, integration, monitor
+docs/           guide/ (team guide), plans/, event-schema.json, HANDOFF.md
+deliverables/   submission index and test results
 samples/        generated example payloads
 ```
