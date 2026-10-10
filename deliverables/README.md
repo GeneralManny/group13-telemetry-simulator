@@ -52,19 +52,19 @@ names and contact details are not published in this public repository.
 
 ## 4. Additional project assets
 
-| Asset                                                                 | Location                                                                                                            |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| n8n workflow exports (3 workflows)                                    | [n8n/workflows/](../n8n/workflows/), built from [scripts/build-n8n-workflows.ts](../scripts/build-n8n-workflows.ts) |
-| Event contract (JSON Schema, v1.0)                                    | [docs/event-schema.json](../docs/event-schema.json)                                                                 |
-| Sample events and demo sequences                                      | [samples/](../samples/)                                                                                             |
-| Example configuration, names only                                     | [.env.example](../.env.example) (service and monitor), [n8n/.env.example](../n8n/.env.example) (n8n)                |
-| Database schema and migrations                                        | [src/monitor/db/](../src/monitor/db/)                                                                               |
-| Risk rules and thresholds                                             | [src/monitor/engine/](../src/monitor/engine/)                                                                       |
-| AI prompt, evidence and fallback templates                            | [src/monitor/evidence.ts](../src/monitor/evidence.ts)                                                               |
-| Dashboard source                                                      | [dashboard/](../dashboard/)                                                                                         |
-| Automated tests                                                       | [tests/](../tests/)                                                                                                 |
-| Screenshots: the three n8n workflows, Slack alerts and review replies | [docs/images/](../docs/images/), shown in the [README](../README.md)                                                |
-| Hosting configuration                                                 | [Dockerfile](../Dockerfile), [railway.json](../railway.json), [n8n/](../n8n/)                                       |
+| Asset                                                                                | Location                                                                                                            |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| n8n workflow exports (3 workflows)                                                   | [n8n/workflows/](../n8n/workflows/), built from [scripts/build-n8n-workflows.ts](../scripts/build-n8n-workflows.ts) |
+| Event contract (JSON Schema, v1.0)                                                   | [docs/event-schema.json](../docs/event-schema.json)                                                                 |
+| Sample events and demo sequences                                                     | [samples/](../samples/)                                                                                             |
+| Example configuration, names only                                                    | [.env.example](../.env.example) (service and monitor), [n8n/.env.example](../n8n/.env.example) (n8n)                |
+| Database schema and migrations                                                       | [src/monitor/db/](../src/monitor/db/)                                                                               |
+| Risk rules and thresholds                                                            | [src/monitor/engine/](../src/monitor/engine/)                                                                       |
+| AI prompt, evidence and fallback templates                                           | [src/monitor/evidence.ts](../src/monitor/evidence.ts)                                                               |
+| Dashboard source                                                                     | [dashboard/](../dashboard/)                                                                                         |
+| Automated tests                                                                      | [tests/](../tests/)                                                                                                 |
+| Screenshots: the dashboard, the three n8n workflows, Slack alerts and review replies | [docs/images/](../docs/images/), shown in the [README](../README.md)                                                |
+| Hosting configuration                                                                | [Dockerfile](../Dockerfile), [railway.json](../railway.json), [n8n/](../n8n/)                                       |
 
 ## Handover checklist (plan section 13)
 

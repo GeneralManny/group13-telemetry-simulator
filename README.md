@@ -146,6 +146,10 @@ Open the service URL in a browser. The console has six tabs:
 - Live events: the event stream with type and player filters, and the exact JSON payload.
 - API guide: base URL, copyable curl commands and the endpoint list.
 
+The Overview tab, idle and ready for a match:
+
+![Dashboard Overview tab: current match, controls with the saved presets, delivery counters, odds chart and player metrics](docs/images/dashboard-console.png)
+
 Access keys are entered in the browser and kept in that tab only (sessionStorage):
 
 | Key                  | Can do                                                                      |
