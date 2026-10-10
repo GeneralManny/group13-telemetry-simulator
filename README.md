@@ -83,16 +83,24 @@ Guide: [chapter 02](docs/guide/02-simulator.md).
 
 ### n8n workflows
 
-| Workflow                         | Does                                                                                                                    |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| G13 1 - Ingest telemetry         | Answers the simulator at once, checks `X-Simulator-Token` and the contract, stores and scores, or records a dead letter |
-| G13 2 - Evidence and Slack alert | Builds the evidence packet, gets the AI or template summary, posts the Slack alert, records delivery                    |
-| G13 3 - Slack review buttons     | Verifies the Slack signature and timestamp, records the decision in the monitor, replies in Slack                       |
+| Workflow                                     | Does                                                                                                                    |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| G13 1 - Ingest telemetry                     | Answers the simulator at once, checks `X-Simulator-Token` and the contract, stores and scores, or records a dead letter |
+| G13 2 - Evidence, AI summary and Slack alert | Builds the evidence packet, gets the AI or template summary, posts the Slack alert, records delivery                    |
+| G13 3 - Slack review buttons                 | Verifies the Slack signature and timestamp, records the decision in the monitor, replies in Slack                       |
 
 The workflows are written as readable code in `scripts/build-n8n-workflows.ts` and generated with `npm run n8n:build`.
 Every secret is read through `$env`, so the JSON in `n8n/workflows/` holds none. Guide:
 [chapters 03](docs/guide/03-n8n-ingestion.md), [06](docs/guide/06-cases-evidence-and-ai.md) and
 [07](docs/guide/07-slack-and-human-review.md).
+
+The three workflows in the n8n editor:
+
+![G13 1 - Ingest telemetry: receive, validate, store and score, or record a dead letter](docs/images/n8n-1-ingest-telemetry.png)
+
+![G13 2 - Evidence, AI summary and Slack alert: a successful run](docs/images/n8n-2-evidence-and-alert.png)
+
+![G13 3 - Slack review buttons: a successful run](docs/images/n8n-3-slack-review.png)
 
 ### Monitor and risk engine
 
@@ -112,6 +120,15 @@ deterministic template is used if none passes. Every case is reviewable even wit
 
 Alerts carry the severity, score, subject, time window, every rule that scored, the summary and the line "Signals for
 human review only. No conclusion has been made." Guide: [chapter 07](docs/guide/07-slack-and-human-review.md).
+
+The two alerts for one `final_demo` case, first at High and then at Critical:
+
+![Slack alerts for CASE-V0N2LG at High and then Critical](docs/images/slack-alerts.png)
+
+Decisions made with the buttons (reviewer names blurred): an escalation, a repeated click that changes nothing, and a
+refused change to a case that was already approved:
+
+![Slack replies to review button clicks](docs/images/slack-review-replies.png)
 
 ### Dashboard
 
