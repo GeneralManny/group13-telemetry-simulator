@@ -4,7 +4,8 @@ Share this page with Teams A-D. Share the API key
 and webhook token through a private channel, never in this file or the repository.
 
 - Public base URL: `https://telemetry-simulator-production-bf55.up.railway.app`
-- Known-good release: Railway deployment `0cea91f6-4401-4761-a3d3-9b8250820677`, git commit `465845a`
+- Known-good release: git tag `v1.0.0`. Railway deployment `6dcb8629-0349-4214-90c0-12bac15a759a` runs the
+  same code (commit `9ac8060`); later commits change documentation only.
 - Event contract: schema version 1.0, frozen. See [event-schema.json](event-schema.json) and the
   README "Event contract" section.
 - Status at any time: `GET <base>/api/v1/status` (no key needed).

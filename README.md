@@ -1,4 +1,16 @@
-# Group 13 Telemetry + Odds Simulator
+# Group 13 Esports Integrity Monitor
+
+Live anti-cheat and match integrity monitoring for esports tournaments: a telemetry and odds simulator, an n8n
+pipeline, an explainable risk engine, evidence summaries, Slack alerts and human review. The system flags signals
+for review; a person makes every decision.
+
+For examiners:
+
+- [Final deliverables](deliverables/README.md): README files, documentation, team members and project assets
+- [Team guide](docs/guide/README.md): how every part works, start with chapter 00
+- [Live dashboard](https://telemetry-simulator-production-bf55.up.railway.app)
+
+## The simulator
 
 A hosted API that behaves like a live esports telemetry and betting-odds provider. It streams
 schema version 1.0 events, one per webhook request, to the Group 13 n8n webhook, and supports
