@@ -3,6 +3,7 @@ import { summarizeCase } from "../../src/monitor/ai.js";
 import {
   aiUserMessage,
   directionViolations,
+  neutralityViolations,
   type EvidencePacket,
 } from "../../src/monitor/evidence.js";
 import { silentLogger } from "../helpers/index.js";
@@ -223,5 +224,58 @@ describe("odds direction in the AI summary", () => {
     const r = await summarizeCase(withOdds, config(), silentLogger, fetchImpl);
     expect(r).toMatchObject({ status: "fallback", reason: "ai_grounding_check_failed" });
     expect(r.text).toContain("shortened for this player's team");
+  });
+});
+
+describe("decisions and timing in the AI summary", () => {
+  it("gives the model the case window as match time", () => {
+    const sent = JSON.parse(aiUserMessage(packet).replace("Evidence packet:\n", ""));
+    expect(sent.window_match_time).toBe("1:00 to 1:30 match time");
+  });
+
+  it("flags the wording seen in a live summary", () => {
+    const live =
+      "The performance spikes occurred in the final minutes of the match (around 90-97 seconds). " +
+      "These are signals for review only. I recommend approving for investigation by a human administrator.";
+    expect(neutralityViolations(live)).toEqual(["recommend approving", "final minutes"]);
+  });
+
+  it("flags other ways of favouring one decision", () => {
+    for (const text of [
+      "The case should be escalated.",
+      "We suggest that the case be dismissed.",
+      "These signals warrant an investigation.",
+      "Recommend escalation to officials.",
+    ]) {
+      expect(neutralityViolations(text)).toHaveLength(1);
+    }
+  });
+
+  it("accepts a neutral closing line and the rule wording for the 30-second window", () => {
+    for (const text of [
+      "A human administrator reviews the case and chooses one of: approve for investigation, dismiss, or escalate.",
+      "We recommend that a human administrator review the case and decide whether to approve for investigation, dismiss, or escalate.",
+      "Average reaction time was 118 ms across 9 actions in the last 30 seconds, from 0:37 to 1:37 match time.",
+    ]) {
+      expect(neutralityViolations(text)).toEqual([]);
+    }
+  });
+
+  it("rejects a steering summary and uses the next model's neutral one", async () => {
+    const { fetchImpl, asked } = fakeOpenRouter([
+      ok("Case CASE-TEST01 needs review. I recommend escalating it."),
+      ok("Case CASE-TEST01: signals for review. A human administrator chooses the outcome."),
+    ]);
+    const r = await summarizeCase(packet, config(), silentLogger, fetchImpl);
+    expect(r.status).toBe("generated");
+    expect(r.text).toContain("chooses the outcome");
+    expect(asked).toEqual(["a:free", "b:free"]);
+  });
+
+  it("falls back to the template when every model favours a decision", async () => {
+    const steer = ok("The case should be approved for investigation.");
+    const { fetchImpl } = fakeOpenRouter([steer, steer, steer]);
+    const r = await summarizeCase(packet, config(), silentLogger, fetchImpl);
+    expect(r).toMatchObject({ status: "fallback", reason: "ai_neutrality_check_failed" });
   });
 });

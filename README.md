@@ -12,7 +12,7 @@ For examiners:
 - [Final deliverables](deliverables/README.md): README files, documentation and project assets (the team member list
   is submitted separately)
 - [Team guide](docs/guide/README.md): how every part works, in plain language; start with chapter 00
-- [Test results](deliverables/TEST_RESULTS.md): 172 of 172 automated tests pass, plus dated end-to-end runs
+- [Test results](deliverables/TEST_RESULTS.md): 178 of 178 automated tests pass, plus dated end-to-end runs
 - [Live dashboard](https://telemetry-simulator-production-bf55.up.railway.app)
 
 ## How it works
@@ -112,7 +112,8 @@ stored evidence. Guide: [chapters 04](docs/guide/04-database.md) and [05](docs/g
 ### Evidence summaries
 
 The AI receives only the evidence packet, with the direction of each odds move stated in plain words. Its answer is
-rejected if it uses accusing language or reverses the odds direction; the next free model is then tried, and the
+rejected if it uses accusing language, reverses the odds direction, favours one decision, or describes timing in its
+own words instead of the match times given; the next free model is then tried, and the
 deterministic template is used if none passes. Every case is reviewable even with no AI available. Guide:
 [chapter 06](docs/guide/06-cases-evidence-and-ai.md).
 
@@ -506,7 +507,7 @@ npm run check   # typecheck, lint, format check and tests
 TEST_DATABASE_URL=postgres://postgres:testpass@localhost:55432/monitor_test npm test   # include the Postgres tests
 ```
 
-172 tests cover the simulator, delivery, webhooks, the API, the risk engine, the AI summary checks, and the monitor
+178 tests cover the simulator, delivery, webhooks, the API, the risk engine, the AI summary checks, and the monitor
 against a real Postgres (11 tests, skipped when `TEST_DATABASE_URL` is not set). Each plan scenario T01 to T18 is
 mapped to its test in [chapter 09](docs/guide/09-testing.md); dated results are in
 [deliverables/TEST_RESULTS.md](deliverables/TEST_RESULTS.md).

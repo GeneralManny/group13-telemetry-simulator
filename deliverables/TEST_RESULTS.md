@@ -8,10 +8,10 @@ Recorded 2026-10-10 against release `v1.0.0`. The test plan (T01 to T18) and how
 | Check                                           | Command                                                                                                        | Result                         |
 | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------ |
 | Type check, lint, formatting, unit tests        | `npm run check`                                                                                                | Pass                           |
-| Full suite including the Postgres service tests | `TEST_DATABASE_URL=postgres://postgres:testpass@localhost:55432/monitor_test npm test` (Postgres 17 in Docker) | 172 of 172 pass, 12 test files |
+| Full suite including the Postgres service tests | `TEST_DATABASE_URL=postgres://postgres:testpass@localhost:55432/monitor_test npm test` (Postgres 17 in Docker) | 178 of 178 pass, 12 test files |
 | Dependency audit                                | `npm audit --omit=dev`                                                                                         | 0 vulnerabilities              |
 
-Without `TEST_DATABASE_URL` the 11 Postgres tests are skipped and the other 161 run.
+Without `TEST_DATABASE_URL` the 11 Postgres tests are skipped and the other 167 run.
 
 ## End-to-end runs
 
@@ -40,6 +40,12 @@ evidence said the odds shortened for the player's own team. The model was readin
 way round. Fixed on 2026-10-10: each odds move sent to the model now states the direction in plain words, and a
 direction check rejects any summary that reverses it (the next model is tried, then the template). Seven tests cover
 it. See [chapter 06](../docs/guide/06-cases-evidence-and-ai.md), "The odds direction check".
+
+A second defect was found on 2026-10-10 in a later production run: the summary ended "I recommend approving for
+investigation", which leans toward one decision, and placed signals at 1:30 to 1:37 "in the final minutes of the match".
+Fixed the same day: the prompt forbids recommending a decision and limits timing to the match times given, the packet
+carries the window as match time, and a neutrality check rejects steering or vague timing (next model, then template).
+Six tests cover it. See chapter 06, "The neutrality check".
 
 ## Not covered by automated tests
 

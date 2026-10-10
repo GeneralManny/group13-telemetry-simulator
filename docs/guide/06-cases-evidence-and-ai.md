@@ -88,7 +88,8 @@ The system prompt (`AI_SYSTEM_PROMPT` in `evidence.ts`) tells the model:
 - refer to a player by display name or as "the player", with no gendered pronouns;
 - odds direction: shortened odds mean the market now rates that team more likely to win; state the `market_moved_toward` direction exactly as given and mention only moves marked `flagged`;
 - state the uncertainty plainly: these are signals for review, not proof;
-- end by recommending that a human administrator review the case and choose approve for investigation, dismiss, or escalate;
+- timing: describe when something happened only with the match times given (`window_match_time`, such as "0:37 to 1:37 match time", and each odds move's `match_time`), never in other words such as "early" or "the final minutes";
+- never recommend, suggest or favour a decision; end by stating that a human administrator reviews the case and chooses one of approve for investigation, dismiss, or escalate;
 - plain text, at most 150 words;
 - structure: one sentence naming case, severity, score and subject; the key measurements with numbers; the timing relationship between signals; the uncertainty statement and recommendation.
 
@@ -103,6 +104,12 @@ After the model answers, `languageViolations()` scans the text for accusing word
 - The AI is no longer left to interpret `shortened_team`. Each odds move it receives carries a plain sentence, `market_moved_toward`, for example "Team Blue, the player's own team", plus `match_time` ("1:30") and `flagged`, which is true only for the move the odds rule actually counted. The raw from and to odds are left out of the AI message; the case page still shows them.
 - `directionViolations()` reads the answer. If it says the flagged move favoured, went toward, or shifted to the wrong side (the other team by name, or "the opposing team" when the odds shortened for the player's own team, and the mirror case), the answer is rejected with the reason `ai_grounding_check_failed`, the next model is tried, and the template is used if none passes. Correct sentences that mention the other team, such as "the opposing team's odds lengthened", pass.
 
+## The neutrality check
+
+The decision belongs to the reviewer, so the summary must not lean toward one. In a production run on 2026-10-10 the model ended with "I recommend approving for investigation" and said the signals came "in the final minutes of the match", when they were at 1:30 to 1:37 of a 4-minute match. The prompt then asked the model to end "by recommending" review, and the window reached it only as raw seconds (37.5 to 97.5).
+
+Now the prompt forbids recommending any decision and limits timing to the match times given, and the packet carries `window_match_time` ("0:37 to 1:37 match time"). `neutralityViolations()` then rejects summaries that steer the decision ("I recommend approving", "should be escalated", "warrants an investigation") or use timing the packet never states ("final minutes", "late in the match", "end of the match"), with the reason `ai_neutrality_check_failed`. The next model is tried, and the template is used if none passes. Naming all three choices neutrally passes, and so does "in the last 30 seconds", which is how the rules describe the window.
+
 ## The fallback template
 
 If anything goes wrong, `fallbackSummary()` writes the summary from the packet alone. It is used when:
@@ -111,7 +118,8 @@ If anything goes wrong, `fallbackSummary()` writes the summary from the packet a
 - the call times out, is rate limited, fails authentication, or errors (`ai_timeout`, `ai_rate_limited`, `ai_auth_failed`, `ai_error_...`, `ai_unreachable`);
 - every model returns empty text (`ai_empty_response`);
 - the language check fails;
-- the odds direction check fails (`ai_grounding_check_failed`).
+- the odds direction check fails (`ai_grounding_check_failed`);
+- the neutrality check fails (`ai_neutrality_check_failed`).
 
 What the template produces for the final demo, in outline:
 

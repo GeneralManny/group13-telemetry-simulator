@@ -146,6 +146,35 @@ export function directionViolations(text: string, p: EvidencePacket): string[] {
  * Deterministic summary used when the AI service is unavailable, too slow, refuses, or produces
  * wording that fails the language check. Built only from packet fields, so it is always grounded.
  */
+/**
+ * Phrases that steer the reviewer toward one decision ("I recommend approving", "should be
+ * escalated"). The summary may name the three choices but never favour one.
+ */
+const STEERING = [
+  /\b(?:recommend|suggest|advise|propose|urge)(?:s|ed|ing)?\s+(?:that\s+)?(?:the\s+case\s+)?(?:be\s+)?(?:approv|escalat|dismiss|investigat|referr)\w*/i,
+  /\b(?:should|must|ought to)\s+(?:be\s+)?(?:approved|escalated|dismissed|investigated|referred)\b/i,
+  /\b(?:warrants?|merits?|justif(?:y|ies))\s+(?:an?\s+)?(?:investigation|escalation|dismissal|approval)\b/i,
+];
+
+/** Vague timing the packet never states; the summary must use the match times given. */
+const VAGUE_TIMING = [
+  /\b(?:final|closing|opening|dying)\s+(?:minutes?|moments?|stages?|seconds?|part)\b/i,
+  /\blast\s+(?:few\s+)?(?:minutes|moments|stages)\b/i,
+  /\b(?:late|early)\s+(?:in|on)\s+the\s+(?:match|game)\b/i,
+  /\b(?:end|start)\s+of\s+the\s+(?:match|game)\b/i,
+];
+
+/**
+ * Checks the AI summary leaves the decision to the reviewer and describes timing only with the
+ * match times in the packet. Returns the offending phrases.
+ */
+export function neutralityViolations(text: string): string[] {
+  return [...STEERING, ...VAGUE_TIMING].flatMap((re) => {
+    const hit = re.exec(text);
+    return hit ? [hit[0]] : [];
+  });
+}
+
 export function fallbackSummary(p: EvidencePacket): string {
   const lines = [
     `Case ${p.case_id}: ${p.severity.toUpperCase()} risk, score ${p.score} of 100, for ${subjectLine(p)} in match ${p.match.match_id}.`,
@@ -174,10 +203,11 @@ Rules for the summary:
 - Refer to a player by display name or as "the player". Do not use gendered pronouns.
 - Odds direction: shortened odds mean the market now rates that team more likely to win. Each odds move has a market_moved_toward field; state that direction exactly as given and never reverse it. Mention only moves marked flagged: true.
 - State the uncertainty plainly: these are signals for review, not proof.
-- End by recommending that a human administrator review the case and decide: approve for investigation, dismiss, or escalate.
+- Timing: describe when something happened only with the match times given (window_match_time, and match_time on each odds move), for example "at 1:30". Do not describe a moment in other words such as early, late, or the final minutes.
+- Do not recommend, suggest or favour any decision. End by stating that a human administrator reviews the case and chooses one of: approve for investigation, dismiss, or escalate.
 - Plain text, no Markdown headings, no bullet symbols other than "- ". At most 150 words.
 
-Structure: one sentence naming the case, severity, score and subject; then the key measurements with their numbers; then the timing relationship between signals if there is one; then the uncertainty statement and recommendation.`;
+Structure: one sentence naming the case, severity, score and subject; then the key measurements with their numbers; then the timing relationship between signals if there is one; then the uncertainty statement and the closing line about human review.`;
 
 /**
  * The user message for the AI call: the packet, minus fields the summary does not need, with
@@ -192,7 +222,8 @@ export function aiUserMessage(p: EvidencePacket): string {
     market_moved_toward: marketMovedToward(p, o.shortened_team),
     flagged: flagged.has(o.event_id),
   }));
-  return `Evidence packet:\n${JSON.stringify({ ...rest, odds_moves }, null, 2)}`;
+  const window_match_time = describeWindow(p);
+  return `Evidence packet:\n${JSON.stringify({ ...rest, window_match_time, odds_moves }, null, 2)}`;
 }
 
 export function describeWindow(p: EvidencePacket): string {

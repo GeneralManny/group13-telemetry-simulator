@@ -117,7 +117,7 @@ Cue: "Team D on reliability."
 
 ### 8. Reliability and conclusion, 45 seconds [7:30]
 
-Team D says: "Event IDs are the database's primary key, so retries and duplicates are stored once. Invalid events go to a dead-letter store with their reason and the pipeline keeps going. Every case has an audit trail. The whole demo resets and replays to the same result because the simulator is seeded. We have 172 automated tests. Current limitations: one instance, simulated baselines, and case pages readable without a key because the data is simulated."
+Team D says: "Event IDs are the database's primary key, so retries and duplicates are stored once. Invalid events go to a dead-letter store with their reason and the pipeline keeps going. Every case has an audit trail. The whole demo resets and replays to the same result because the simulator is seeded. We have 178 automated tests. Current limitations: one instance, simulated baselines, and case pages readable without a key because the data is simulated."
 
 Emmanuel closes: "The simulator can be replaced by a real telemetry provider without changing the monitor. The system gives administrators fast, explainable signals; people make the decisions. Thank you."
 
