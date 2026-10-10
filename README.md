@@ -6,7 +6,7 @@ for review; a person makes every decision.
 
 For examiners:
 
-- [Final deliverables](deliverables/README.md): README files, documentation, team members and project assets
+- [Final deliverables](deliverables/README.md): README files, documentation and project assets (the team member list is submitted separately)
 - [Team guide](docs/guide/README.md): how every part works, start with chapter 00
 - [Live dashboard](https://telemetry-simulator-production-bf55.up.railway.app)
 

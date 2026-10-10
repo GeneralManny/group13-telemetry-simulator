@@ -47,8 +47,8 @@ Also:
 
 ## 3. Active team members
 
-| Name | Team and role | Parts owned |
-| ---- | ------------- | ----------- |
+The list of active team members is submitted separately by the team leader as a shared document, so members'
+names and contact details are not published in this public repository.
 
 ## 4. Additional project assets
 
