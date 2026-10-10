@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 import {
   AI_SYSTEM_PROMPT,
   aiUserMessage,
+  directionViolations,
   fallbackSummary,
   languageViolations,
   type EvidencePacket,
@@ -49,8 +50,9 @@ function cleanText(text: string): string {
 
 /**
  * Writes the case summary with a free model on OpenRouter, grounded in the evidence packet.
- * Models are tried in order; any failure (no key, timeout, rate limit, empty answer, or wording
- * that fails the language check) moves to the next, and if none succeeds the deterministic
+ * Models are tried in order; any failure (no key, timeout, rate limit, empty answer, wording
+ * that fails the language check, or an odds direction that contradicts the evidence) moves to
+ * the next, and if none succeeds the deterministic
  * template is used, so a case is always reviewable.
  */
 export async function summarizeCase(
@@ -123,6 +125,15 @@ export async function summarizeCase(
         logger.warn(
           { case_id: packet.case_id, model, violations },
           "AI summary failed the language check",
+        );
+        continue;
+      }
+      const reversed = directionViolations(text, packet);
+      if (reversed.length) {
+        lastReason = "ai_grounding_check_failed";
+        logger.warn(
+          { case_id: packet.case_id, model, reversed },
+          "AI summary reversed the odds direction",
         );
         continue;
       }

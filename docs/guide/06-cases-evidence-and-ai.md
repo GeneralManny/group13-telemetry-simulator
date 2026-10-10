@@ -86,6 +86,7 @@ The system prompt (`AI_SYSTEM_PROMPT` in `evidence.ts`) tells the model:
 - never state or suggest that anyone cheated, fixed a match, used software, or is guilty; describe measurements and how unusual they are;
 - do not use the accusing words at all, not even to deny them ("this does not prove cheating" still fails the check below), and say "signals for review" instead;
 - refer to a player by display name or as "the player", with no gendered pronouns;
+- odds direction: shortened odds mean the market now rates that team more likely to win; state the `market_moved_toward` direction exactly as given and mention only moves marked `flagged`;
 - state the uncertainty plainly: these are signals for review, not proof;
 - end by recommending that a human administrator review the case and choose approve for investigation, dismiss, or escalate;
 - plain text, at most 150 words;
@@ -95,6 +96,13 @@ The system prompt (`AI_SYSTEM_PROMPT` in `evidence.ts`) tells the model:
 
 After the model answers, `languageViolations()` scans the text for accusing words: cheat and its forms, match-fixing, "fixed the match", guilt or guilty, rigged, hack and its forms, aimbot, wallhack, and "threw" or "throwing" the match, game or round. Any hit rejects the AI text and the template is used instead, with the reason `ai_language_check_failed` written to the log. Neutral sentences such as "These signals do not prove wrongdoing" pass.
 
+## The odds direction check
+
+"Shortened odds" is betting language that models often read backwards. In early production runs the model wrote that the 30.1% move favoured the opposing team, while the evidence said the odds shortened for Blue Seven's own team. Two things now prevent that:
+
+- The AI is no longer left to interpret `shortened_team`. Each odds move it receives carries a plain sentence, `market_moved_toward`, for example "Team Blue, the player's own team", plus `match_time` ("1:30") and `flagged`, which is true only for the move the odds rule actually counted. The raw from and to odds are left out of the AI message; the case page still shows them.
+- `directionViolations()` reads the answer. If it says the flagged move favoured, went toward, or shifted to the wrong side (the other team by name, or "the opposing team" when the odds shortened for the player's own team, and the mirror case), the answer is rejected with the reason `ai_grounding_check_failed`, the next model is tried, and the template is used if none passes. Correct sentences that mention the other team, such as "the opposing team's odds lengthened", pass.
+
 ## The fallback template
 
 If anything goes wrong, `fallbackSummary()` writes the summary from the packet alone. It is used when:
@@ -102,7 +110,8 @@ If anything goes wrong, `fallbackSummary()` writes the summary from the packet a
 - no API key is set (`ai_not_configured`);
 - the call times out, is rate limited, fails authentication, or errors (`ai_timeout`, `ai_rate_limited`, `ai_auth_failed`, `ai_error_...`, `ai_unreachable`);
 - every model returns empty text (`ai_empty_response`);
-- the language check fails.
+- the language check fails;
+- the odds direction check fails (`ai_grounding_check_failed`).
 
 What the template produces for the final demo, in outline:
 

@@ -1,5 +1,5 @@
 import type { RuleHit } from "./engine/risk.js";
-import { clockText } from "./engine/risk.js";
+import { RULE_IDS, clockText } from "./engine/risk.js";
 
 /**
  * The evidence packet is the only thing the AI summary, the Slack alert and the case page are
@@ -68,10 +68,78 @@ export function languageViolations(text: string): string[] {
   return ACCUSATORY.filter((re) => re.test(text)).map((re) => re.source);
 }
 
+const TEAM_NAMES: Record<string, string[]> = {
+  team_blue: ["Team Blue", "team_blue", "Blue team"],
+  team_red: ["Team Red", "team_red", "Red team"],
+};
+
+function teamName(teamId: string): string {
+  return TEAM_NAMES[teamId]?.[0] ?? teamId;
+}
+
 function subjectLine(p: EvidencePacket): string {
   if (p.subject.type === "market") return "the match-winner betting market";
-  const team = p.subject.team_id === "team_blue" ? "Team Blue" : "Team Red";
-  return `${p.subject.display_name} (${p.subject.player_id}, ${team})`;
+  return `${p.subject.display_name} (${p.subject.player_id}, ${teamName(p.subject.team_id)})`;
+}
+
+/** Event IDs of the odds moves the odds rule actually flagged for this case. */
+function flaggedOddsIds(p: EvidencePacket): Set<string> {
+  return new Set(
+    p.rules.filter((r) => r.rule_id === RULE_IDS.odds).flatMap((r) => r.source_event_ids),
+  );
+}
+
+/**
+ * Plain-language direction of an odds move. Shortened odds mean the market now rates that team
+ * more likely to win; models read "shortened" the wrong way round, so the summary is given this
+ * sentence instead of having to interpret the field.
+ */
+function marketMovedToward(p: EvidencePacket, shortened: string | null): string | null {
+  if (!shortened) return null;
+  const name = teamName(shortened);
+  if (p.subject.type !== "player") return name;
+  return shortened === p.subject.team_id
+    ? `${name}, the player's own team`
+    : `${name}, the opposing team`;
+}
+
+const ESCAPE = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** A verb of favouring followed directly (or after "the") by the side it favours. */
+const favouring = (targets: string[]) =>
+  new RegExp(
+    String.raw`\b(?:favou?r(?:s|ed|ing)?|in favou?r of|towards?|shift(?:s|ed|ing)? to)\s+(?:the\s+)?(?:${targets.join("|")})\b`,
+    "i",
+  );
+
+/**
+ * Checks that an AI summary does not reverse the direction of the flagged odds move, for
+ * example "favoring the opposing team" when the odds shortened for the player's own team.
+ * Skipped when the case has no flagged move or the flagged moves disagree on the team.
+ */
+export function directionViolations(text: string, p: EvidencePacket): string[] {
+  const ids = flaggedOddsIds(p);
+  const teams = new Set(
+    p.odds_moves
+      .filter((o) => ids.has(o.event_id) && o.shortened_team)
+      .map((o) => o.shortened_team!),
+  );
+  if (teams.size !== 1) return [];
+  const toward = [...teams][0]!;
+  const other = toward === "team_blue" ? "team_red" : "team_blue";
+  const wrong = (TEAM_NAMES[other] ?? [other]).map(ESCAPE);
+  if (p.subject.type === "player") {
+    if (toward === p.subject.team_id) {
+      wrong.push(String.raw`(?:opposing|other|rival)\s+(?:team|side)`, String.raw`opponents?`);
+    } else {
+      wrong.push(
+        String.raw`(?:player's|this player's|their)\s+(?:own\s+)?team`,
+        String.raw`(?:its|their)\s+own\s+team`,
+      );
+    }
+  }
+  const re = favouring(wrong);
+  const hit = re.exec(text);
+  return hit ? [hit[0]] : [];
 }
 
 /**
@@ -104,16 +172,27 @@ Rules for the summary:
 - Never state or suggest that anyone cheated, fixed a match, used software, or is guilty. Describe measurements and how unusual they are.
 - Do not use the words cheat, cheating, hack, aimbot, wallhack, rigged, guilty, match-fixing or throwing at all, not even to say they are unproven. Say "signals for review" instead.
 - Refer to a player by display name or as "the player". Do not use gendered pronouns.
+- Odds direction: shortened odds mean the market now rates that team more likely to win. Each odds move has a market_moved_toward field; state that direction exactly as given and never reverse it. Mention only moves marked flagged: true.
 - State the uncertainty plainly: these are signals for review, not proof.
 - End by recommending that a human administrator review the case and decide: approve for investigation, dismiss, or escalate.
 - Plain text, no Markdown headings, no bullet symbols other than "- ". At most 150 words.
 
 Structure: one sentence naming the case, severity, score and subject; then the key measurements with their numbers; then the timing relationship between signals if there is one; then the uncertainty statement and recommendation.`;
 
-/** The user message for the AI call: the packet, minus fields the summary does not need. */
+/**
+ * The user message for the AI call: the packet, minus fields the summary does not need, with
+ * each odds move's direction spelled out next to its numbers.
+ */
 export function aiUserMessage(p: EvidencePacket): string {
   const { sample_events: _samples, case_url: _url, ...rest } = p;
-  return `Evidence packet:\n${JSON.stringify(rest, null, 2)}`;
+  const flagged = flaggedOddsIds(p);
+  const odds_moves = p.odds_moves.map(({ from: _from, to: _to, ...o }) => ({
+    ...o,
+    match_time: clockText(o.match_clock),
+    market_moved_toward: marketMovedToward(p, o.shortened_team),
+    flagged: flagged.has(o.event_id),
+  }));
+  return `Evidence packet:\n${JSON.stringify({ ...rest, odds_moves }, null, 2)}`;
 }
 
 export function describeWindow(p: EvidencePacket): string {

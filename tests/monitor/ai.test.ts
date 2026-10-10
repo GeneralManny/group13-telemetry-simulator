@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { summarizeCase } from "../../src/monitor/ai.js";
-import type { EvidencePacket } from "../../src/monitor/evidence.js";
+import {
+  aiUserMessage,
+  directionViolations,
+  type EvidencePacket,
+} from "../../src/monitor/evidence.js";
 import { silentLogger } from "../helpers/index.js";
 
 const packet: EvidencePacket = {
@@ -121,5 +125,103 @@ describe("AI summary through OpenRouter", () => {
     const r = await summarizeCase(packet, config(), silentLogger, fetchImpl);
     expect(r).toMatchObject({ status: "fallback", reason: "ai_auth_failed" });
     expect(asked).toHaveLength(1);
+  });
+});
+
+/** The final demo's case: the odds shortened for Team Blue, player_07's own team, at 1:30. */
+const withOdds: EvidencePacket = {
+  ...packet,
+  rules: [
+    ...packet.rules,
+    {
+      rule_id: "ODDS_UNEXPLAINED_MOVE",
+      component: "odds",
+      points: 30,
+      description:
+        "An unexplained 30.1% odds move at 1:30 (shortened for this player's team) occurred 8 seconds from this performance change.",
+      source_event_ids: ["odds_90"],
+    },
+  ],
+  odds_moves: [
+    {
+      event_id: "odds_90",
+      match_clock: 90,
+      movement_pct: 30.1,
+      shortened_team: "team_blue",
+      from: { team_blue: 1.9, team_red: 1.9 },
+      to: { team_blue: 1.33, team_red: 2.85 },
+    },
+  ],
+};
+
+describe("odds direction in the AI summary", () => {
+  it("spells out which team the market moved toward, next to the numbers", () => {
+    const sent = JSON.parse(aiUserMessage(withOdds).replace("Evidence packet:\n", ""));
+    expect(sent.odds_moves[0]).toMatchObject({
+      movement_pct: 30.1,
+      match_time: "1:30",
+      market_moved_toward: "Team Blue, the player's own team",
+      flagged: true,
+    });
+  });
+
+  it("flags the reversed wording seen in a live alert", () => {
+    const live =
+      "An unexplained 30.1 % odds move favoring the opposing team occurred at 90 seconds match clock.";
+    expect(directionViolations(live, withOdds)).toHaveLength(1);
+    expect(directionViolations("The odds moved in favour of Team Red.", withOdds)).toHaveLength(1);
+  });
+
+  it("accepts the correct direction, including mentions of the opposing team's odds", () => {
+    for (const text of [
+      "An unexplained 30.1% odds move at 1:30 shortened for Team Blue, the player's own team.",
+      "The market moved toward Team Blue; the opposing team's odds lengthened.",
+      "The odds move favoured the player's own team.",
+    ]) {
+      expect(directionViolations(text, withOdds)).toEqual([]);
+    }
+  });
+
+  it("checks the mirror case: a Team Red player whose opponents were favoured", () => {
+    const red: EvidencePacket = {
+      ...withOdds,
+      subject: {
+        type: "player",
+        player_id: "player_03",
+        display_name: "Red Three",
+        team_id: "team_red",
+      },
+    };
+    expect(directionViolations("The odds move favoured the player's own team.", red)).toHaveLength(
+      1,
+    );
+    expect(
+      directionViolations("The odds move favoured Team Blue, the opposing team.", red),
+    ).toEqual([]);
+  });
+
+  it("skips the check when the case has no flagged odds move", () => {
+    expect(directionViolations("Favoring the opposing team.", packet)).toEqual([]);
+  });
+
+  it("rejects a reversed summary and uses the next model's correct one", async () => {
+    const { fetchImpl, asked } = fakeOpenRouter([
+      ok("Case CASE-TEST01: a 30.1% odds move favoring the opposing team. Signals for review."),
+      ok(
+        "Case CASE-TEST01: a 30.1% odds move toward Team Blue, the player's own team. Signals for review.",
+      ),
+    ]);
+    const r = await summarizeCase(withOdds, config(), silentLogger, fetchImpl);
+    expect(r.status).toBe("generated");
+    expect(r.text).toContain("toward Team Blue");
+    expect(asked).toEqual(["a:free", "b:free"]);
+  });
+
+  it("falls back to the template when every model reverses the direction", async () => {
+    const wrong = ok("The odds move favoured the opposing team.");
+    const { fetchImpl } = fakeOpenRouter([wrong, wrong, wrong]);
+    const r = await summarizeCase(withOdds, config(), silentLogger, fetchImpl);
+    expect(r).toMatchObject({ status: "fallback", reason: "ai_grounding_check_failed" });
+    expect(r.text).toContain("shortened for this player's team");
   });
 });

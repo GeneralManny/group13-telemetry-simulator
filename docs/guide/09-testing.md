@@ -17,7 +17,7 @@ tests/monitor/service.test.ts   the monitor against a real Postgres: storage, ca
 tests/helpers/       shared helpers (simulate a whole match in memory, a fake webhook)
 ```
 
-There are 165 tests and all pass. The 11 tests in `tests/monitor/service.test.ts` need a real database and are skipped when none is configured.
+There are 172 tests and all pass. The 11 tests in `tests/monitor/service.test.ts` need a real database and are skipped when none is configured.
 
 The n8n workflows are not run by the automated tests. Their behaviour was verified by the lead in a local end-to-end run through real n8n 2.41.4: 302 of 302 events stored once, one case for player_07 at Critical 95, exactly two Slack messages ("New HIGH integrity case", then "rose to CRITICAL"), invalid events recorded as dead letters (`validation_failed` or `monitor_rejected`) while later events kept flowing, signed Slack clicks recorded as reviews, repeated clicks changing nothing, and a forged signature rejected.
 
@@ -78,4 +78,4 @@ Also tested: the severity boundaries 29/30, 59/60 and 79/80 (engine.test "uses t
 
 ## What to say in the demo
 
-"We have 165 automated tests, including eleven that run against a real Postgres. They cover every required scenario except the database outage, which we tested by design and document as a limitation. The n8n pipeline was verified end to end: 302 of 302 events stored once, one case, exactly two Slack messages."
+"We have 172 automated tests, including eleven that run against a real Postgres. They cover every required scenario except the database outage, which we tested by design and document as a limitation. The n8n pipeline was verified end to end: 302 of 302 events stored once, one case, exactly two Slack messages."
